@@ -13,7 +13,7 @@ export async function POST(req, { params }) {
     const chargeAmount = amount || 5390
 
     // Look up signup by token
-    const rows = await sql`SELECT * FROM signups WHERE token = ${token}`
+    const rows = await sql`SELECT * FROM signups WHERE private_token = ${token} OR token = ${token}`
     if (rows.length === 0) {
       return Response.json({ error: 'Invalid checkout link.' }, { status: 404 })
     }
@@ -95,12 +95,14 @@ export async function POST(req, { params }) {
       return Response.json({ error: `${code}: ${msg}` }, { status: 400 })
     }
 
-    // Update order count, set paid, set last order date, require review for next order
+    // Update order count and generate NEW private token after payment
     const newOrderCount = (signup.order_count || 0) + 1
+    const privateToken = crypto.randomBytes(24).toString('hex')
     await sql`
       UPDATE signups SET
         paid = true,
         checked_out = true,
+        private_token = ${privateToken},
         order_count = ${newOrderCount},
         last_order_date = NOW(),
         review_required = ${newOrderCount < 3},
@@ -108,8 +110,8 @@ export async function POST(req, { params }) {
       WHERE token = ${token}
     `
 
-    // Send customer confirmation email with private link
-    const checkoutLink = `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/${token}`
+    // Send customer confirmation email with PRIVATE token link (generated only after payment)
+    const checkoutLink = `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/${privateToken}`
     await resend.emails.send({
       from: 'OI Body Chemistry <noreply@orishainfinity.com>',
       to: signup.email,
