@@ -62,6 +62,12 @@ export default function FunnelPage() {
     document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const [signupToken, setSignupToken] = useState('')
+  const [cardReady, setCardReady] = useState(false)
+  const [card, setCard] = useState(null)
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState('')
+
   const handleCheckout = async () => {
     if (!shipData.address || shipData.address.trim().length < 5) {
       alert('Please enter a valid street address.')
@@ -117,7 +123,7 @@ export default function FunnelPage() {
       const data = await res.json()
       if (res.ok) {
         setRemaining(data.remaining)
-        setSubmitted(true)
+        setSignupToken(data.token)
         setCheckoutScreen(3)
         document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
       } else if (res.status === 410) {
@@ -129,6 +135,60 @@ export default function FunnelPage() {
       alert('Network error — please check your connection and try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (checkoutScreen !== 3 || card) return
+    const script = document.createElement('script')
+    script.src = 'https://web.squarecdn.com/v1/square.js'
+    script.onload = async () => {
+      try {
+        const payments = window.Square.payments('sq0idp-AIJWRKIPpIwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
+        const c = await payments.card({
+          style: {
+            '.input-container': { borderColor: 'rgba(200,168,138,0.3)', borderRadius: '6px' },
+            '.input-container.is-focus': { borderColor: '#C8A88A' },
+            input: { color: '#F3ECE5', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' },
+            'input::placeholder': { color: 'rgba(232,221,210,0.4)' },
+          }
+        })
+        await c.attach('#card-container')
+        setCard(c)
+        setCardReady(true)
+      } catch (e) { console.error(e) }
+    }
+    document.body.appendChild(script)
+  }, [checkoutScreen])
+
+  const handlePay = async () => {
+    if (!card) return
+    setPaying(true)
+    setPayError('')
+    try {
+      const result = await card.tokenize()
+      if (result.status !== 'OK') {
+        setPayError('Card error — please check your details and try again.')
+        setPaying(false)
+        return
+      }
+      const res = await fetch(`/api/checkout/${signupToken}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceId: result.token }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setSubmitted(true)
+        setCheckoutScreen(4)
+        document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
+      } else {
+        setPayError(data.error || 'Payment failed. Please try again.')
+      }
+    } catch (e) {
+      setPayError('Something went wrong. Please try again.')
+    } finally {
+      setPaying(false)
     }
   }
 
@@ -499,7 +559,29 @@ export default function FunnelPage() {
               </div>
             )}
 
-            {/* SCREEN 3 — Success */}
+            {/* SCREEN 3 — Payment */}
+            {!capacityFull && !submitted && checkoutScreen === 3 && (
+              <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'20px'}}>
+                <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px 18px',marginBottom:'20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div>
+                    <p style={{fontSize:'10px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.5,marginBottom:'4px'}}>Your Selection</p>
+                    <p style={{fontSize:'14px',color:'var(--gold-light)',fontWeight:600}}>{formData.booster}™</p>
+                  </div>
+                  <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'28px',fontWeight:700,color:'var(--gold-light)'}}>$45</span>
+                </div>
+                <p style={checkoutLabelStyle}>Payment Information</p>
+                <div id="card-container" style={{minHeight:'90px',marginBottom:'16px',background:'var(--warm)',borderRadius:'6px',padding:'12px'}} />
+                {!cardReady && <p style={{fontSize:'11px',opacity:0.5,textAlign:'center',marginBottom:'16px'}}>Loading secure payment form...</p>}
+                {payError && <p style={{fontSize:'12px',color:'#ff6b6b',marginBottom:'12px',textAlign:'center'}}>{payError}</p>}
+                <button onClick={handlePay} disabled={!cardReady || paying} style={{...submitBtnStyle, opacity: cardReady && !paying ? 1 : 0.5, cursor: cardReady && !paying ? 'pointer' : 'not-allowed'}}>
+                  {paying ? 'Processing...' : 'Complete Order — $45'}
+                </button>
+                <button onClick={() => setCheckoutScreen(2)} style={{width:'100%',background:'transparent',border:'none',color:'var(--gold)',fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',padding:'12px',cursor:'pointer',marginTop:'6px'}}>← Back</button>
+                <p style={{textAlign:'center',fontSize:'9px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase',marginTop:'8px'}}>Secured by Square · SSL Encrypted</p>
+              </div>
+            )}
+
+            {/* SCREEN 4 — Success */}
             {submitted && (
               <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'32px 20px',textAlign:'center'}}>
                 <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'22px',fontStyle:'italic',color:'var(--gold-light)',marginBottom:'16px'}}>You are In! ✳️</p>

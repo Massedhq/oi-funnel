@@ -82,7 +82,7 @@ export async function POST(req) {
       `
     })
 
-    return Response.json({ success: true, remaining: updated[0].remaining })
+    return Response.json({ success: true, remaining: updated[0].remaining, token })
 
   } catch (err) {
     console.error(err)
