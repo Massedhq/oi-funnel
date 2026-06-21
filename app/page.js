@@ -144,9 +144,7 @@ export default function FunnelPage() {
     script.onload = async () => {
       try {
         const payments = window.Square.payments('sq0idp-AIJWRKIPpIwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
-        const c = await payments.card({
-          postalCode: false
-        })
+        const c = await payments.card()
         await c.attach('#card-container')
         setCard(c)
         setCardReady(true)
@@ -174,8 +172,10 @@ export default function FunnelPage() {
     setPayError('')
     try {
       const result = await card.tokenize()
+      console.log('Tokenize result:', JSON.stringify(result))
       if (result.status !== 'OK') {
-        setPayError('Card error — please check your details and try again.')
+        const errors = result.errors?.map(e => e.message).join(', ') || 'Please check your card details.'
+        setPayError(errors)
         setPaying(false)
         return
       }
