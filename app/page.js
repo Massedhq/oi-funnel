@@ -142,7 +142,7 @@ export default function FunnelPage() {
 
     const initSquare = async () => {
       try {
-        const payments = window.Square.payments('sq0idp-AIJWRKIPpIwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
+        const payments = window.Square.payments('sandbox-sq0idb-eRGofW4DzY5eJtTS6eGPpw', 'LQA2D2J5740ZV')
 
         const total = formData.supplies === 'single' ? '55.65' : formData.supplies === 'monthly' ? '60.90' : '53.90'
 
@@ -186,7 +186,7 @@ export default function FunnelPage() {
       initSquare()
     } else {
       const script = document.createElement('script')
-      script.src = 'https://web.squarecdn.com/v1/square.js'
+      script.src = 'https://sandbox.web.squarecdn.com/v1/square.js'
       script.onload = initSquare
       document.body.appendChild(script)
     }
