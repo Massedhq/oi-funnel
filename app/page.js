@@ -149,7 +149,7 @@ export default function FunnelPage() {
           style: {
             '.input-container': { borderColor: 'rgba(200,168,138,0.3)', borderRadius: '6px' },
             '.input-container.is-focus': { borderColor: '#C8A88A' },
-            input: { color: '#F3ECE5', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' },
+            input: { color: '#F3ECE5', fontSize: '13px' },
             'input::placeholder': { color: 'rgba(232,221,210,0.4)' },
           }
         })
