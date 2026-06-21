@@ -532,7 +532,7 @@ export default function FunnelPage() {
           <div id="join-section" style={{padding:'56px 20px 32px',background:'var(--black)',color:'var(--white)'}}>
             <p style={sectionLabelStyle}>Limited Enrollment</p>
             <h2 style={sectionTitleStyle}>Begin Your <em style={{fontStyle:'italic',color:'var(--gold-light)'}}>Journey</em></h2>
-            <p style={sectionSubStyle}>Select your wellness booster, complete checkout, and your private link will be sent directly to your email.</p>
+            <p style={sectionSubStyle}>Select your wellness booster, complete your order, and your private link will be emailed to you after payment is confirmed.</p>
 
             {/* SCREEN 1 — Contact + Booster */}
             {!capacityFull && !submitted && checkoutScreen === 1 && (
@@ -692,7 +692,7 @@ export default function FunnelPage() {
             {submitted && (
               <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'32px 20px',textAlign:'center'}}>
                 <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'22px',fontStyle:'italic',color:'var(--gold-light)',marginBottom:'16px'}}>You are In! ✳️</p>
-                <p style={{fontSize:'13px',color:'var(--light-beige)',lineHeight:1.7,marginBottom:'24px'}}>Check your email — your exclusive checkout link is on its way! Congratulations on making the first step to your new identity journey on becoming.</p>
+                <p style={{fontSize:'13px',color:'var(--light-beige)',lineHeight:1.7,marginBottom:'24px'}}>Congratulations on making the first step to your new identity journey on becoming. Complete your order below to lock in your spot and receive your private link.</p>
                 <a href="https://www.facebook.com/share/g/17tA4EgWx8/" target="_blank" rel="noreferrer" style={{display:'block',width:'100%',background:'transparent',border:'1px solid var(--gold)',color:'var(--gold)',fontSize:'11px',fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',textAlign:'center',padding:'16px',borderRadius:'6px',textDecoration:'none'}}>Join Our Private Group →</a>
               </div>
             )}
