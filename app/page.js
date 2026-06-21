@@ -179,10 +179,12 @@ export default function FunnelPage() {
         setPaying(false)
         return
       }
+      const supplies = formData.supplies || 'none'
+      const amount = supplies === 'single' ? 4675 : supplies === 'monthly' ? 5200 : 4500
       const res = await fetch(`/api/checkout/${signupToken}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId: result.token }),
+        body: JSON.stringify({ sourceId: result.token, supplies, amount }),
       })
       const data = await res.json()
       if (res.ok && data.success) {
@@ -570,13 +572,39 @@ export default function FunnelPage() {
             {/* SCREEN 3 — Payment */}
             {!capacityFull && !submitted && checkoutScreen === 3 && (
               <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'20px'}}>
-                <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px 18px',marginBottom:'20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px 18px',marginBottom:'16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>
                     <p style={{fontSize:'10px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.5,marginBottom:'4px'}}>Your Selection</p>
                     <p style={{fontSize:'14px',color:'var(--gold-light)',fontWeight:600}}>{formData.booster}™</p>
                   </div>
                   <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'28px',fontWeight:700,color:'var(--gold-light)'}}>$45</span>
                 </div>
+
+                {/* UPSELL */}
+                <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px',marginBottom:'16px'}}>
+                  <p style={{fontSize:'10px',fontWeight:600,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--gold)',marginBottom:'10px'}}>Add On — Supplies</p>
+                  <label style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'8px',cursor:'pointer'}}>
+                    <input type="radio" name="supplies" value="none" checked={formData.supplies === 'none' || !formData.supplies} onChange={e => setFormData({...formData, supplies: 'none'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
+                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>No thanks</span>
+                  </label>
+                  <label style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'8px',cursor:'pointer'}}>
+                    <input type="radio" name="supplies" value="single" checked={formData.supplies === 'single'} onChange={e => setFormData({...formData, supplies: 'single'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
+                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>Syringes & Alcohol Pads — Single Supply <span style={{color:'var(--gold)',fontWeight:600}}>+$1.75</span></span>
+                  </label>
+                  <label style={{display:'flex',alignItems:'flex-start',gap:'10px',cursor:'pointer'}}>
+                    <input type="radio" name="supplies" value="monthly" checked={formData.supplies === 'monthly'} onChange={e => setFormData({...formData, supplies: 'monthly'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
+                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>Syringes & Alcohol Pads — Month Supply <span style={{color:'var(--gold)',fontWeight:600}}>+$7.00</span></span>
+                  </label>
+                </div>
+
+                {/* TOTAL */}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px',paddingBottom:'12px',borderBottom:'1px solid var(--border)'}}>
+                  <span style={{fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.6}}>Total</span>
+                  <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:700,color:'var(--gold-light)'}}>
+                    ${formData.supplies === 'single' ? '46.75' : formData.supplies === 'monthly' ? '52.00' : '45.00'}
+                  </span>
+                </div>
+
                 <p style={checkoutLabelStyle}>Payment Information</p>
                 <div style={{background:'#fff',borderRadius:'8px',padding:'12px',marginBottom:'16px'}}>
                   <div id="card-container" style={{minHeight:'90px'}} />
@@ -584,7 +612,7 @@ export default function FunnelPage() {
                 {!cardReady && <p style={{fontSize:'11px',opacity:0.5,textAlign:'center',marginBottom:'16px'}}>Loading secure payment form...</p>}
                 {payError && <p style={{fontSize:'12px',color:'#ff6b6b',marginBottom:'12px',textAlign:'center'}}>{payError}</p>}
                 <button onClick={handlePay} disabled={!cardReady || paying} style={{...submitBtnStyle, opacity: cardReady && !paying ? 1 : 0.5, cursor: cardReady && !paying ? 'pointer' : 'not-allowed'}}>
-                  {paying ? 'Processing...' : 'Complete Order — $45'}
+                  {paying ? 'Processing...' : `Complete Order — $${formData.supplies === 'single' ? '46.75' : formData.supplies === 'monthly' ? '52.00' : '45.00'}`}
                 </button>
                 <button onClick={() => setCheckoutScreen(2)} style={{width:'100%',background:'transparent',border:'none',color:'var(--gold)',fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',padding:'12px',cursor:'pointer',marginTop:'6px'}}>← Back</button>
                 <p style={{textAlign:'center',fontSize:'9px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase',marginTop:'8px'}}>Secured by Square · SSL Encrypted</p>

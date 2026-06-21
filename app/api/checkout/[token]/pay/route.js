@@ -1,11 +1,13 @@
 import { sql } from '@/lib/db'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req, { params }) {
   try {
     const { token } = params
-    const { sourceId } = await req.json()
+    const { sourceId, supplies, amount } = await req.json()
+    const chargeAmount = amount || 4500
 
     // Look up signup by token
     const rows = await sql`SELECT * FROM signups WHERE token = ${token}`
@@ -19,6 +21,19 @@ export async function POST(req, { params }) {
       return Response.json({ error: 'This order has already been placed.' }, { status: 409 })
     }
 
+    // Truncate fields to Square's 45 char limit
+    const suppliesLabel = supplies === 'single' ? '+Single Supplies' : supplies === 'monthly' ? '+Monthly Supplies' : ''
+    const note = `OI-${signup.booster}${suppliesLabel ? '-' + suppliesLabel : ''}-${signup.name}`.slice(0, 45)
+    const addr1 = (signup.bill_address || signup.ship_address || '').slice(0, 45)
+    const locality = (signup.bill_city || signup.ship_city || '').slice(0, 45)
+    const state = (signup.bill_state || signup.ship_state || '').slice(0, 2)
+    const postal = (signup.bill_zip || signup.ship_zip || '').slice(0, 10)
+    const shipAddr1 = (signup.ship_address || '').slice(0, 45)
+    const shipAddr2 = (signup.ship_address2 || '').slice(0, 45)
+    const shipCity = (signup.ship_city || '').slice(0, 45)
+    const shipState = (signup.ship_state || '').slice(0, 2)
+    const shipZip = (signup.ship_zip || '').slice(0, 10)
+
     // Charge via Square
     const squareRes = await fetch('https://connect.squareup.com/v2/payments', {
       method: 'POST',
@@ -29,25 +44,25 @@ export async function POST(req, { params }) {
       },
       body: JSON.stringify({
         source_id: sourceId,
-        idempotency_key: `${token}-${Date.now()}`,
-        amount_money: { amount: 4500, currency: 'USD' },
+        idempotency_key: crypto.randomUUID(),
+        amount_money: { amount: chargeAmount, currency: 'USD' },
         buyer_email_address: signup.email,
         billing_address: {
-          address_line_1: signup.bill_address || signup.ship_address,
-          locality: signup.bill_city || signup.ship_city,
-          administrative_district_level_1: signup.bill_state || signup.ship_state,
-          postal_code: signup.bill_zip || signup.ship_zip,
+          address_line_1: addr1,
+          locality,
+          administrative_district_level_1: state,
+          postal_code: postal,
           country: 'US',
         },
         shipping_address: {
-          address_line_1: signup.ship_address,
-          address_line_2: signup.ship_address2 || '',
-          locality: signup.ship_city,
-          administrative_district_level_1: signup.ship_state,
-          postal_code: signup.ship_zip,
+          address_line_1: shipAddr1,
+          address_line_2: shipAddr2,
+          locality: shipCity,
+          administrative_district_level_1: shipState,
+          postal_code: shipZip,
           country: 'US',
         },
-        note: `OI Body Chemistry - ${signup.booster} - ${signup.name}`,
+        note,
         location_id: 'LQA2D2J5740ZV',
       }),
     })
