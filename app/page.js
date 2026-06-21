@@ -139,18 +139,57 @@ export default function FunnelPage() {
 
   useEffect(() => {
     if (checkoutScreen !== 3 || card) return
-    const script = document.createElement('script')
-    script.src = 'https://web.squarecdn.com/v1/square.js'
-    script.onload = async () => {
+
+    const initSquare = async () => {
       try {
         const payments = window.Square.payments('sq0idp-AIJWRKIPpIwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
+
+        const total = formData.supplies === 'single' ? '55.65' : formData.supplies === 'monthly' ? '60.90' : '53.90'
+
+        const paymentRequest = payments.paymentRequest({
+          countryCode: 'US',
+          currencyCode: 'USD',
+          total: { amount: total, label: 'OI Body Chemistry' },
+        })
+
+        // Card
         const c = await payments.card()
         await c.attach('#card-container')
         setCard(c)
         setCardReady(true)
+
+        // Apple Pay
+        try {
+          const applePay = await payments.applePay(paymentRequest)
+          await applePay.attach('#apple-pay-button')
+        } catch (e) { console.log('Apple Pay not available') }
+
+        // Google Pay
+        try {
+          const googlePay = await payments.googlePay(paymentRequest)
+          await googlePay.attach('#google-pay-button')
+        } catch (e) { console.log('Google Pay not available') }
+
+        // Cash App Pay
+        try {
+          const cashApp = await payments.cashAppPay(paymentRequest, {
+            redirectURL: window.location.href,
+            referenceId: `oi-${signupToken.substring(0, 20)}`,
+          })
+          await cashApp.attach('#cash-app-pay')
+        } catch (e) { console.log('Cash App Pay not available') }
+
       } catch (e) { console.error('Square error:', e) }
     }
-    document.body.appendChild(script)
+
+    if (window.Square) {
+      initSquare()
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://web.squarecdn.com/v1/square.js'
+      script.onload = initSquare
+      document.body.appendChild(script)
+    }
   }, [checkoutScreen])
 
   const lookupZip = async (zip, type) => {
@@ -180,7 +219,7 @@ export default function FunnelPage() {
         return
       }
       const supplies = formData.supplies || 'none'
-      const amount = supplies === 'single' ? 4675 : supplies === 'monthly' ? 5200 : 4500
+      const amount = supplies === 'single' ? 5565 : supplies === 'monthly' ? 6090 : 5390
       const res = await fetch(`/api/checkout/${signupToken}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -598,21 +637,51 @@ export default function FunnelPage() {
                 </div>
 
                 {/* TOTAL */}
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px',paddingBottom:'12px',borderBottom:'1px solid var(--border)'}}>
-                  <span style={{fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.6}}>Total</span>
-                  <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:700,color:'var(--gold-light)'}}>
-                    ${formData.supplies === 'single' ? '46.75' : formData.supplies === 'monthly' ? '52.00' : '45.00'}
-                  </span>
+                <div style={{marginBottom:'16px',paddingBottom:'12px',borderBottom:'1px solid var(--border)'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
+                    <span style={{fontSize:'12px',opacity:0.6}}>Booster</span>
+                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$45.00</span>
+                  </div>
+                  {formData.supplies === 'single' && (
+                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
+                      <span style={{fontSize:'12px',opacity:0.6}}>Single Supplies</span>
+                      <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$1.75</span>
+                    </div>
+                  )}
+                  {formData.supplies === 'monthly' && (
+                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
+                      <span style={{fontSize:'12px',opacity:0.6}}>Monthly Supplies</span>
+                      <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$7.00</span>
+                    </div>
+                  )}
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'10px'}}>
+                    <span style={{fontSize:'12px',opacity:0.6}}>Shipping</span>
+                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$8.90</span>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderTop:'1px solid var(--border)',paddingTop:'10px'}}>
+                    <span style={{fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.6}}>Total</span>
+                    <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:700,color:'var(--gold-light)'}}>
+                      ${formData.supplies === 'single' ? '55.65' : formData.supplies === 'monthly' ? '60.90' : '53.90'}
+                    </span>
+                  </div>
                 </div>
 
                 <p style={checkoutLabelStyle}>Payment Information</p>
+                <div id="apple-pay-button" style={{marginBottom:'8px'}}/>
+                <div id="google-pay-button" style={{marginBottom:'8px'}}/>
+                <div id="cash-app-pay" style={{marginBottom:'12px'}}/>
+                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}>
+                  <div style={{flex:1,height:'1px',background:'var(--border)'}}/>
+                  <span style={{fontSize:'10px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase'}}>or pay with card</span>
+                  <div style={{flex:1,height:'1px',background:'var(--border)'}}/>
+                </div>
                 <div style={{background:'#fff',borderRadius:'8px',padding:'12px',marginBottom:'16px'}}>
                   <div id="card-container" style={{minHeight:'90px'}} />
                 </div>
                 {!cardReady && <p style={{fontSize:'11px',opacity:0.5,textAlign:'center',marginBottom:'16px'}}>Loading secure payment form...</p>}
                 {payError && <p style={{fontSize:'12px',color:'#ff6b6b',marginBottom:'12px',textAlign:'center'}}>{payError}</p>}
                 <button onClick={handlePay} disabled={!cardReady || paying} style={{...submitBtnStyle, opacity: cardReady && !paying ? 1 : 0.5, cursor: cardReady && !paying ? 'pointer' : 'not-allowed'}}>
-                  {paying ? 'Processing...' : `Complete Order — $${formData.supplies === 'single' ? '46.75' : formData.supplies === 'monthly' ? '52.00' : '45.00'}`}
+                  {paying ? 'Processing...' : `Complete Order — $${formData.supplies === 'single' ? '55.65' : formData.supplies === 'monthly' ? '60.90' : '53.90'}`}
                 </button>
                 <button onClick={() => setCheckoutScreen(2)} style={{width:'100%',background:'transparent',border:'none',color:'var(--gold)',fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',padding:'12px',cursor:'pointer',marginTop:'6px'}}>← Back</button>
                 <p style={{textAlign:'center',fontSize:'9px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase',marginTop:'8px'}}>Secured by Square · SSL Encrypted</p>

@@ -7,7 +7,7 @@ export async function POST(req, { params }) {
   try {
     const { token } = params
     const { sourceId, supplies, amount } = await req.json()
-    const chargeAmount = amount || 4500
+    const chargeAmount = amount || 5390
 
     // Look up signup by token
     const rows = await sql`SELECT * FROM signups WHERE token = ${token}`
