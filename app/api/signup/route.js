@@ -35,6 +35,8 @@ export async function POST(req) {
     await sql`UPDATE spots SET remaining = remaining - 1 WHERE id = 1`
     const updated = await sql`SELECT remaining FROM spots WHERE id = 1`
 
+    // NO EMAIL SENT HERE — email sent only after payment is confirmed in pay/route.js
+
     return Response.json({ success: true, remaining: updated[0].remaining, token })
 
   } catch (err) {
