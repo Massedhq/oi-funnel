@@ -8,7 +8,7 @@ export default function FunnelPage() {
   const [agreed, setAgreed] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', booster: '' })
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', booster: '', supplies: 'none' })
   const [smsAgreed, setSmsAgreed] = useState(false)
   const [remaining, setRemaining] = useState(300)
   const [capacityFull, setCapacityFull] = useState(false)
@@ -23,6 +23,7 @@ export default function FunnelPage() {
   const [card, setCard] = useState(null)
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState('')
+  const [squareInitialized, setSquareInitialized] = useState(false)
 
   useEffect(() => {
     fetch('/api/spots')
@@ -40,61 +41,37 @@ export default function FunnelPage() {
     document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const getTotal = () => {
+    const s = formData.supplies
+    return s === 'single' ? '55.65' : s === 'monthly' ? '60.90' : '53.90'
+  }
+
+  const getTotalCents = () => {
+    const s = formData.supplies
+    return s === 'single' ? 5565 : s === 'monthly' ? 6090 : 5390
+  }
+
   const goToShipping = () => {
-    if (!formData.name || formData.name.trim().length < 2) {
-      alert('Please enter your full name.')
-      return
-    }
+    if (!formData.name || formData.name.trim().length < 2) { alert('Please enter your full name.'); return }
     const phoneClean = formData.phone.replace(/\D/g, '')
-    if (phoneClean.length !== 10) {
-      alert('Please enter a valid 10-digit phone number.')
-      return
-    }
+    if (phoneClean.length !== 10) { alert('Please enter a valid 10-digit phone number.'); return }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
-      alert('Please enter a valid email address.')
-      return
-    }
-    if (!formData.booster) {
-      alert('Please select your wellness booster.')
-      return
-    }
-    if (!smsAgreed) {
-      alert('Please agree to the Terms and Conditions to continue.')
-      return
-    }
+    if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return }
+    if (!formData.booster) { alert('Please select your wellness booster.'); return }
+    if (!smsAgreed) { alert('Please agree to the Terms and Conditions to continue.'); return }
     setCheckoutScreen(2)
     document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const handleCheckout = async () => {
-    if (!shipData.address || shipData.address.trim().length < 5) {
-      alert('Please enter a valid street address.')
-      return
-    }
-    if (!shipData.city || shipData.city.trim().length < 2) {
-      alert('Please enter a valid city.')
-      return
-    }
-    if (!shipData.state) {
-      alert('Please select your state.')
-      return
-    }
+    if (!shipData.address || shipData.address.trim().length < 5) { alert('Please enter a valid street address.'); return }
+    if (!shipData.city || shipData.city.trim().length < 2) { alert('Please enter a valid city.'); return }
+    if (!shipData.state) { alert('Please select your state.'); return }
     const zipClean = shipData.zip.replace(/\D/g, '')
-    if (zipClean.length !== 5) {
-      alert('Please enter a valid 5-digit ZIP code.')
-      return
-    }
+    if (zipClean.length !== 5) { alert('Please enter a valid 5-digit ZIP code.'); return }
     if (!billSameAsShip) {
-      if (!billData.address || !billData.city || !billData.state) {
-        alert('Please complete your billing address.')
-        return
-      }
-      const billZipClean = billData.zip.replace(/\D/g, '')
-      if (billZipClean.length !== 5) {
-        alert('Please enter a valid billing ZIP code.')
-        return
-      }
+      if (!billData.address || !billData.city || !billData.state) { alert('Please complete your billing address.'); return }
+      if (billData.zip.replace(/\D/g, '').length !== 5) { alert('Please enter a valid billing ZIP code.'); return }
     }
     setLoading(true)
     try {
@@ -137,14 +114,15 @@ export default function FunnelPage() {
     }
   }
 
+  // Square init — fires when checkoutScreen hits 3 and token is ready
   useEffect(() => {
-    if (checkoutScreen !== 3 || card) return
+    if (checkoutScreen !== 3 || squareInitialized || !signupToken) return
 
     const initSquare = async () => {
       try {
         const payments = window.Square.payments('sandbox-sq0idb-eRGofW4DzY5eJtTS6eGPpw', 'LQA2D2J5740ZV')
 
-        const total = formData.supplies === 'single' ? '55.65' : formData.supplies === 'monthly' ? '60.90' : '53.90'
+        const total = getTotal()
 
         const paymentRequest = payments.paymentRequest({
           countryCode: 'US',
@@ -179,7 +157,8 @@ export default function FunnelPage() {
           await cashApp.attach('#cash-app-pay')
         } catch (e) { console.log('Cash App Pay not available') }
 
-      } catch (e) { console.error('Square error:', e) }
+        setSquareInitialized(true)
+      } catch (e) { console.error('Square init error:', e) }
     }
 
     if (window.Square) {
@@ -190,7 +169,7 @@ export default function FunnelPage() {
       script.onload = initSquare
       document.body.appendChild(script)
     }
-  }, [checkoutScreen])
+  }, [checkoutScreen, signupToken])
 
   const lookupZip = async (zip, type) => {
     if (zip.length !== 5) return
@@ -200,8 +179,8 @@ export default function FunnelPage() {
       const data = await res.json()
       const state = data.places?.[0]?.['state abbreviation']
       const city = data.places?.[0]?.['place name']
-      if (state && type === 'ship') setShipData(d => ({...d, state, city: d.city || city}))
-      if (state && type === 'bill') setBillData(d => ({...d, state, city: d.city || city}))
+      if (state && type === 'ship') setShipData(d => ({ ...d, state, city: d.city || city }))
+      if (state && type === 'bill') setBillData(d => ({ ...d, state, city: d.city || city }))
     } catch (e) {}
   }
 
@@ -211,19 +190,24 @@ export default function FunnelPage() {
     setPayError('')
     try {
       const result = await card.tokenize()
-      console.log('Tokenize result:', JSON.stringify(result))
       if (result.status !== 'OK') {
-        const errors = result.errors?.map(e => e.message).join(', ') || 'Please check your card details.'
-        setPayError(errors)
+        setPayError(result.errors?.map(e => e.message).join(', ') || 'Please check your card details.')
         setPaying(false)
         return
       }
       const supplies = formData.supplies || 'none'
-      const amount = supplies === 'single' ? 5565 : supplies === 'monthly' ? 6090 : 5390
+      const amount = getTotalCents()
+      // note field capped at 45 chars to satisfy Square API limit
+      const noteLine = `OI Body Chemistry - ${formData.booster} - ${formData.name}`.substring(0, 45)
       const res = await fetch(`/api/checkout/${signupToken}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId: result.token, supplies, amount }),
+        body: JSON.stringify({
+          sourceId: result.token,
+          supplies,
+          amount,
+          note: noteLine,
+        }),
       })
       const data = await res.json()
       if (res.ok && data.success) {
@@ -232,7 +216,6 @@ export default function FunnelPage() {
         document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
       } else {
         setPayError(data.error || 'Payment failed. Please try again.')
-        console.log('Full error:', data)
       }
     } catch (e) {
       setPayError('Something went wrong. Please try again.')
@@ -619,24 +602,24 @@ export default function FunnelPage() {
                   <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'28px',fontWeight:700,color:'var(--gold-light)'}}>$45</span>
                 </div>
 
-                {/* UPSELL */}
+                {/* SUPPLIES UPSELL */}
                 <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px',marginBottom:'16px'}}>
                   <p style={{fontSize:'10px',fontWeight:600,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--gold)',marginBottom:'10px'}}>Add On — Supplies</p>
                   <label style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'8px',cursor:'pointer'}}>
-                    <input type="radio" name="supplies" value="none" checked={formData.supplies === 'none' || !formData.supplies} onChange={e => setFormData({...formData, supplies: 'none'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
+                    <input type="radio" name="supplies" value="none" checked={formData.supplies === 'none' || !formData.supplies} onChange={() => setFormData({...formData, supplies: 'none'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
                     <span style={{fontSize:'12px',color:'var(--light-beige)'}}>No thanks</span>
                   </label>
                   <label style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'8px',cursor:'pointer'}}>
-                    <input type="radio" name="supplies" value="single" checked={formData.supplies === 'single'} onChange={e => setFormData({...formData, supplies: 'single'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
+                    <input type="radio" name="supplies" value="single" checked={formData.supplies === 'single'} onChange={() => setFormData({...formData, supplies: 'single'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
                     <span style={{fontSize:'12px',color:'var(--light-beige)'}}>Syringes & Alcohol Pads — Single Supply <span style={{color:'var(--gold)',fontWeight:600}}>+$1.75</span></span>
                   </label>
                   <label style={{display:'flex',alignItems:'flex-start',gap:'10px',cursor:'pointer'}}>
-                    <input type="radio" name="supplies" value="monthly" checked={formData.supplies === 'monthly'} onChange={e => setFormData({...formData, supplies: 'monthly'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
+                    <input type="radio" name="supplies" value="monthly" checked={formData.supplies === 'monthly'} onChange={() => setFormData({...formData, supplies: 'monthly'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
                     <span style={{fontSize:'12px',color:'var(--light-beige)'}}>Syringes & Alcohol Pads — Month Supply <span style={{color:'var(--gold)',fontWeight:600}}>+$7.00</span></span>
                   </label>
                 </div>
 
-                {/* TOTAL */}
+                {/* ORDER TOTAL */}
                 <div style={{marginBottom:'16px',paddingBottom:'12px',borderBottom:'1px solid var(--border)'}}>
                   <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
                     <span style={{fontSize:'12px',opacity:0.6}}>Booster</span>
@@ -661,11 +644,12 @@ export default function FunnelPage() {
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderTop:'1px solid var(--border)',paddingTop:'10px'}}>
                     <span style={{fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.6}}>Total</span>
                     <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:700,color:'var(--gold-light)'}}>
-                      ${formData.supplies === 'single' ? '55.65' : formData.supplies === 'monthly' ? '60.90' : '53.90'}
+                      ${getTotal()}
                     </span>
                   </div>
                 </div>
 
+                {/* PAYMENT METHODS */}
                 <p style={checkoutLabelStyle}>Payment Information</p>
                 <div id="apple-pay-button" style={{marginBottom:'8px'}}/>
                 <div id="google-pay-button" style={{marginBottom:'8px'}}/>
@@ -681,7 +665,7 @@ export default function FunnelPage() {
                 {!cardReady && <p style={{fontSize:'11px',opacity:0.5,textAlign:'center',marginBottom:'16px'}}>Loading secure payment form...</p>}
                 {payError && <p style={{fontSize:'12px',color:'#ff6b6b',marginBottom:'12px',textAlign:'center'}}>{payError}</p>}
                 <button onClick={handlePay} disabled={!cardReady || paying} style={{...submitBtnStyle, opacity: cardReady && !paying ? 1 : 0.5, cursor: cardReady && !paying ? 'pointer' : 'not-allowed'}}>
-                  {paying ? 'Processing...' : `Complete Order — $${formData.supplies === 'single' ? '55.65' : formData.supplies === 'monthly' ? '60.90' : '53.90'}`}
+                  {paying ? 'Processing...' : `Complete Order — $${getTotal()}`}
                 </button>
                 <button onClick={() => setCheckoutScreen(2)} style={{width:'100%',background:'transparent',border:'none',color:'var(--gold)',fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',padding:'12px',cursor:'pointer',marginTop:'6px'}}>← Back</button>
                 <p style={{textAlign:'center',fontSize:'9px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase',marginTop:'8px'}}>Secured by Square · SSL Encrypted</p>
@@ -692,7 +676,7 @@ export default function FunnelPage() {
             {submitted && (
               <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'32px 20px',textAlign:'center'}}>
                 <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'22px',fontStyle:'italic',color:'var(--gold-light)',marginBottom:'16px'}}>You are In! ✳️</p>
-                <p style={{fontSize:'13px',color:'var(--light-beige)',lineHeight:1.7,marginBottom:'24px'}}>Congratulations on making the first step to your new identity journey on becoming. Complete your order below to lock in your spot and receive your private link.</p>
+                <p style={{fontSize:'13px',color:'var(--light-beige)',lineHeight:1.7,marginBottom:'24px'}}>Congratulations on making the first step to your new identity journey on becoming. Your private checkout link has been sent to your email.</p>
                 <a href="https://www.facebook.com/share/g/17tA4EgWx8/" target="_blank" rel="noreferrer" style={{display:'block',width:'100%',background:'transparent',border:'1px solid var(--gold)',color:'var(--gold)',fontSize:'11px',fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',textAlign:'center',padding:'16px',borderRadius:'6px',textDecoration:'none'}}>Join Our Private Group →</a>
               </div>
             )}

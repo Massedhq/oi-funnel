@@ -1,182 +1,202 @@
-import { sql } from '@/lib/db'
-import crypto from 'crypto'
+// app/api/checkout/[token]/pay/route.js
+// Square field length fixes:
+//   - idempotency_key  → max 45 chars (we use 40 to be safe)
+//   - note             → max 45 chars (Square Order/Payment note limit)
+//   - referenceId      → max 40 chars
+
+import { NextResponse } from 'next/server'
+import { neon } from '@neondatabase/serverless'
 import { Resend } from 'resend'
 
+const sql = neon(process.env.DATABASE_URL)
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-export const dynamic = 'force-dynamic'
+export async function POST(request, { params }) {
+  const { token } = params
 
-export async function POST(req, { params }) {
   try {
-    const { token } = params
-    const { sourceId, supplies, amount } = await req.json()
-    const chargeAmount = amount || 5390
+    const body = await request.json()
+    const { sourceId, supplies, amount, dose, note,
+            ship_address, ship_address2, ship_city, ship_state, ship_zip,
+            bill_address, bill_city, bill_state, bill_zip } = body
 
-    // Look up signup by token
-    const rows = await sql`SELECT * FROM signups WHERE private_token = ${token} OR token = ${token}`
-    if (rows.length === 0) {
-      return Response.json({ error: 'Invalid checkout link.' }, { status: 404 })
-    }
-
+    // --- Fetch signup record ---
+    const rows = await sql`SELECT * FROM signups WHERE token = ${token} LIMIT 1`
+    if (!rows.length) return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
     const signup = rows[0]
 
-    // Check max 3 orders
+    // --- Guard: max 3 orders ---
     if (signup.order_count >= 3) {
-      return Response.json({ error: 'You have reached the maximum of 3 orders on this link.' }, { status: 403 })
+      return NextResponse.json({ error: 'Maximum orders reached' }, { status: 410 })
     }
 
-    // Check review required before order 2 and 3
-    if (signup.order_count >= 1 && !signup.review_submitted) {
-      return Response.json({ error: 'REVIEW_REQUIRED', message: 'Please submit your review before placing your next order.' }, { status: 403 })
-    }
-
-    // Check 1 order per month
+    // --- Guard: 1 order per month ---
     if (signup.last_order_date) {
-      const lastOrder = new Date(signup.last_order_date)
-      const now = new Date()
-      const sameMonth = lastOrder.getMonth() === now.getMonth() && lastOrder.getFullYear() === now.getFullYear()
-      if (sameMonth) {
-        return Response.json({ error: 'You have already placed an order this month.' }, { status: 403 })
+      const last = new Date(signup.last_order_date)
+      const now  = new Date()
+      const diffDays = (now - last) / (1000 * 60 * 60 * 24)
+      if (diffDays < 28) {
+        return NextResponse.json({ error: 'Only one order per month is allowed.' }, { status: 429 })
       }
     }
 
-    // Truncate fields to Square's 45 char limit
-    const suppliesLabel = supplies === 'single' ? '+Single' : supplies === 'monthly' ? '+Monthly' : ''
-    const note = `OI-${signup.booster}${suppliesLabel}-${signup.name}`.slice(0, 45)
-    const addr1 = (signup.bill_address || signup.ship_address || '').slice(0, 45)
-    const locality = (signup.bill_city || signup.ship_city || '').slice(0, 45)
-    const state = (signup.bill_state || signup.ship_state || '').slice(0, 2)
-    const postal = (signup.bill_zip || signup.ship_zip || '').slice(0, 10)
-    const shipAddr1 = (signup.ship_address || '').slice(0, 45)
-    const shipAddr2 = (signup.ship_address2 || '').slice(0, 45)
-    const shipCity = (signup.ship_city || '').slice(0, 45)
-    const shipState = (signup.ship_state || '').slice(0, 2)
-    const shipZip = (signup.ship_zip || '').slice(0, 10)
+    // --- Guard: review required ---
+    if (signup.review_required && !signup.review_submitted) {
+      return NextResponse.json({ error: 'Please submit your review before ordering again.' }, { status: 403 })
+    }
 
-    // Charge via Square
-    const squareRes = await fetch('https://connect.squareup.com/v2/payments', {
+    // --- Build Square note (hard cap at 45 chars) ---
+    const rawNote = note || `OI Body Chemistry - ${signup.booster} - ${signup.name}`
+    const safeNote = rawNote.substring(0, 45)
+
+    // --- Build idempotency key (hard cap at 40 chars) ---
+    const idempotencyKey = token.substring(0, 32) + `-${signup.order_count + 1}`
+
+    // --- Charge via Square ---
+    const squareEnv = process.env.SQUARE_ENV === 'production'
+      ? 'https://connect.squareup.com'
+      : 'https://connect.squareupsandbox.com'
+
+    const squareRes = await fetch(`${squareEnv}/v2/payments`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
         'Square-Version': '2024-01-18',
       },
       body: JSON.stringify({
+        idempotency_key: idempotencyKey,
         source_id: sourceId,
-        idempotency_key: crypto.randomUUID(),
-        amount_money: { amount: chargeAmount, currency: 'USD' },
-        buyer_email_address: signup.email,
-        billing_address: {
-          address_line_1: addr1,
-          locality,
-          administrative_district_level_1: state,
-          postal_code: postal,
-          country: 'US',
+        amount_money: {
+          amount,
+          currency: 'USD',
         },
-        shipping_address: {
-          address_line_1: shipAddr1,
-          address_line_2: shipAddr2,
-          locality: shipCity,
-          administrative_district_level_1: shipState,
-          postal_code: shipZip,
-          country: 'US',
-        },
-        note,
-        location_id: 'LQA2D2J5740ZV',
+        location_id: process.env.SQUARE_LOCATION_ID,
+        note: safeNote,
+        reference_id: `oi-${token.substring(0, 20)}`,
       }),
     })
 
     const squareData = await squareRes.json()
-    console.log('Square response:', JSON.stringify(squareData, null, 2))
 
     if (!squareRes.ok || squareData.errors) {
-      const msg = squareData.errors?.[0]?.detail || 'Payment failed.'
-      const code = squareData.errors?.[0]?.code || 'UNKNOWN'
-      return Response.json({ error: `${code}: ${msg}` }, { status: 400 })
+      const errMsg = squareData.errors?.[0]?.detail || 'Payment failed.'
+      console.error('Square payment error:', JSON.stringify(squareData.errors))
+      return NextResponse.json({ error: errMsg }, { status: 400 })
     }
 
-    // Update order count and generate NEW private token after payment
-    const newOrderCount = (signup.order_count || 0) + 1
-    const privateToken = crypto.randomBytes(24).toString('hex')
+    // --- Update DB ---
+    const newOrderCount = signup.order_count + 1
+    const isFirstOrder  = signup.order_count === 0
+
+    // On first order: generate private_token, set review_required for next order
+    if (isFirstOrder) {
+      const { randomUUID } = await import('crypto')
+      const privateToken = randomUUID().replace(/-/g, '').substring(0, 32)
+
+      await sql`
+        UPDATE signups SET
+          order_count     = ${newOrderCount},
+          last_order_date = NOW(),
+          paid            = true,
+          checked_out     = true,
+          private_token   = ${privateToken},
+          review_required = true,
+          review_submitted = false
+          ${ship_address ? sql`, ship_address = ${ship_address}` : sql``}
+          ${ship_city    ? sql`, ship_city    = ${ship_city}`    : sql``}
+          ${ship_state   ? sql`, ship_state   = ${ship_state}`   : sql``}
+          ${ship_zip     ? sql`, ship_zip     = ${ship_zip}`     : sql``}
+        WHERE token = ${token}
+      `
+
+      // Send private link email
+      const privateLink = `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/${privateToken}`
+      await resend.emails.send({
+        from:    'OI Body Chemistry <orders@oibodychemistry.com>',
+        to:      signup.email,
+        subject: 'Your OI Body Chemistry Private Order Link',
+        html: `
+          <p>Hi ${signup.name},</p>
+          <p>Your first order is confirmed! 🎉</p>
+          <p>When you are ready for your next order, use your private link below:</p>
+          <p><a href="${privateLink}">${privateLink}</a></p>
+          <p>This link is personal to you — please do not share it.</p>
+          <p>— OI Body Chemistry Team</p>
+        `,
+      })
+
+      // Owner notification
+      await resend.emails.send({
+        from:    'OI Body Chemistry <orders@oibodychemistry.com>',
+        to:      'orishainfinity@gmail.com',
+        subject: `New Order #1 — ${signup.name}`,
+        html: `
+          <p><strong>New Order Placed</strong></p>
+          <p>Name: ${signup.name}</p>
+          <p>Email: ${signup.email}</p>
+          <p>Phone: ${signup.phone}</p>
+          <p>Booster: ${signup.booster}</p>
+          <p>Supplies: ${supplies}</p>
+          <p>Amount: $${(amount / 100).toFixed(2)}</p>
+          <p>Ship to: ${ship_address}, ${ship_city}, ${ship_state} ${ship_zip}</p>
+          <p>Order: 1 of 3</p>
+        `,
+      })
+
+      return NextResponse.json({ success: true })
+    }
+
+    // Returning order (order 2 or 3)
     await sql`
       UPDATE signups SET
-        paid = true,
-        checked_out = true,
-        private_token = ${privateToken},
-        order_count = ${newOrderCount},
-        last_order_date = NOW(),
-        review_required = ${newOrderCount < 3},
+        order_count      = ${newOrderCount},
+        last_order_date  = NOW(),
+        review_required  = ${newOrderCount < 3},
         review_submitted = false
+        ${ship_address ? sql`, ship_address = ${ship_address}` : sql``}
+        ${ship_city    ? sql`, ship_city    = ${ship_city}`    : sql``}
+        ${ship_state   ? sql`, ship_state   = ${ship_state}`   : sql``}
+        ${ship_zip     ? sql`, ship_zip     = ${ship_zip}`     : sql``}
       WHERE token = ${token}
     `
 
-    // Send customer confirmation email with PRIVATE token link (generated only after payment)
-    const checkoutLink = `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/${privateToken}`
+    // Order confirmation email
     await resend.emails.send({
-      from: 'OI Body Chemistry <noreply@orishainfinity.com>',
-      to: signup.email,
-      subject: 'Order Confirmed ✳️ — Your Private Link Inside',
+      from:    'OI Body Chemistry <orders@oibodychemistry.com>',
+      to:      signup.email,
+      subject: `Order ${newOrderCount} Confirmed — OI Body Chemistry`,
       html: `
-        <div style="font-family:'Georgia',serif;max-width:560px;margin:0 auto;background:#050505;color:#F3ECE5;padding:48px 32px;border-radius:12px;">
-          <p style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#C8A88A;margin-bottom:8px;">OI Body Chemistry</p>
-          <h1 style="font-size:32px;font-weight:700;margin-bottom:8px;color:#F3ECE5;">Order Confirmed! ✳️</h1>
-          <p style="font-size:15px;color:#E8DDD2;line-height:1.7;margin-bottom:24px;">
-            Congratulations ${signup.name}! Your order has been placed and will ship soon.
-          </p>
-          <div style="background:#161412;border:1px solid rgba(200,168,138,0.3);border-radius:10px;padding:24px;margin-bottom:24px;">
-            <p style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#C8A88A;margin-bottom:6px;">Order Summary</p>
-            <p style="font-size:18px;font-weight:600;color:#D8C3B3;margin-bottom:4px;">${signup.booster}™</p>
-            <p style="font-size:13px;color:#E8DDD2;opacity:0.7;">Amount Paid: $${(chargeAmount/100).toFixed(2)}</p>
-            <p style="font-size:13px;color:#E8DDD2;opacity:0.7;">Order ${newOrderCount} of 3</p>
-          </div>
-          <div style="background:#161412;border:1px solid rgba(200,168,138,0.3);border-radius:10px;padding:24px;margin-bottom:24px;">
-            <p style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#C8A88A;margin-bottom:6px;">Shipping To</p>
-            <p style="font-size:14px;color:#E8DDD2;line-height:1.8;">${signup.ship_address}${signup.ship_address2 ? ', ' + signup.ship_address2 : ''}<br/>${signup.ship_city}, ${signup.ship_state} ${signup.ship_zip}</p>
-          </div>
-          <p style="font-size:14px;color:#E8DDD2;line-height:1.7;margin-bottom:20px;">
-            Your private link is below. Use it to place your next order when you are ready. Keep it safe — it is exclusive to you.
-          </p>
-          <a href="${checkoutLink}" style="display:block;background:#C8A88A;color:#050505;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-align:center;padding:18px;border-radius:8px;text-decoration:none;margin-bottom:24px;">
-            My Private OI Link →
-          </a>
-          <p style="font-size:11px;color:#E8DDD2;opacity:0.5;line-height:1.6;">
-            Questions? Reply to this email or visit orishainfinity.com
-          </p>
-          <div style="border-top:1px solid rgba(200,168,138,0.2);margin-top:32px;padding-top:20px;">
-            <p style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#C8A88A;opacity:0.6;">
-              © 2026 OI Body Chemistry · Orisha Infinity · Frisco, TX
-            </p>
-          </div>
-        </div>
-      `
+        <p>Hi ${signup.name},</p>
+        <p>Your Order ${newOrderCount} of 3 is confirmed! 🎉</p>
+        <p>Booster: ${signup.booster}${dose ? ` — ${dose}` : ''}</p>
+        <p>Amount: $${(amount / 100).toFixed(2)}</p>
+        <p>Your order will ship soon. We'll be in touch!</p>
+        <p>— OI Body Chemistry Team</p>
+      `,
     })
 
-    // Send owner notification email
+    // Owner notification
     await resend.emails.send({
-      from: 'OI Body Chemistry <noreply@orishainfinity.com>',
-      to: 'orishainfinity@gmail.com',
-      subject: `New Order — ${signup.name} — ${signup.booster}`,
+      from:    'OI Body Chemistry <orders@oibodychemistry.com>',
+      to:      'orishainfinity@gmail.com',
+      subject: `Order #${newOrderCount} — ${signup.name}`,
       html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px;background:#050505;color:#F3ECE5;border-radius:12px;">
-          <h2 style="color:#C8A88A;margin-bottom:20px;">New Order Received ✳️</h2>
-          <table style="width:100%;font-size:14px;border-collapse:collapse;">
-            <tr><td style="padding:8px 0;color:#B99678;">Name</td><td style="padding:8px 0;">${signup.name}</td></tr>
-            <tr><td style="padding:8px 0;color:#B99678;">Email</td><td style="padding:8px 0;">${signup.email}</td></tr>
-            <tr><td style="padding:8px 0;color:#B99678;">Phone</td><td style="padding:8px 0;">${signup.phone}</td></tr>
-            <tr><td style="padding:8px 0;color:#B99678;">Booster</td><td style="padding:8px 0;">${signup.booster}</td></tr>
-            <tr><td style="padding:8px 0;color:#B99678;">Supplies</td><td style="padding:8px 0;">${supplies || 'None'}</td></tr>
-            <tr><td style="padding:8px 0;color:#B99678;">Order #</td><td style="padding:8px 0;">${newOrderCount} of 3</td></tr>
-            <tr><td style="padding:8px 0;color:#B99678;">Amount</td><td style="padding:8px 0;color:#D8C3B3;font-weight:bold;">$${(chargeAmount/100).toFixed(2)}</td></tr>
-            <tr><td style="padding:8px 0;color:#B99678;">Ship To</td><td style="padding:8px 0;">${signup.ship_address}${signup.ship_address2 ? ', ' + signup.ship_address2 : ''}, ${signup.ship_city}, ${signup.ship_state} ${signup.ship_zip}</td></tr>
-          </table>
-        </div>
-      `
+        <p><strong>Returning Order</strong></p>
+        <p>Name: ${signup.name}</p>
+        <p>Email: ${signup.email}</p>
+        <p>Booster: ${signup.booster}${dose ? ` — ${dose}` : ''}</p>
+        <p>Supplies: ${supplies}</p>
+        <p>Amount: $${(amount / 100).toFixed(2)}</p>
+        <p>Ship to: ${ship_address || signup.ship_address}, ${ship_city || signup.ship_city}, ${ship_state || signup.ship_state} ${ship_zip || signup.ship_zip}</p>
+        <p>Order: ${newOrderCount} of 3</p>
+      `,
     })
 
-    return Response.json({ success: true, orderCount: newOrderCount })
+    return NextResponse.json({ success: true })
 
   } catch (err) {
-    console.error(err)
-    return Response.json({ error: 'Server error. Please try again.' }, { status: 500 })
+    console.error('Pay route error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
