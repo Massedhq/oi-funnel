@@ -18,6 +18,11 @@ export default function FunnelPage() {
   const [billData, setBillData] = useState({ address: '', address2: '', city: '', state: '', zip: '' })
   const [billSameAsShip, setBillSameAsShip] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [signupToken, setSignupToken] = useState('')
+  const [cardReady, setCardReady] = useState(false)
+  const [card, setCard] = useState(null)
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState('')
 
   useEffect(() => {
     fetch('/api/spots')
@@ -61,12 +66,6 @@ export default function FunnelPage() {
     setCheckoutScreen(2)
     document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
   }
-
-  const [signupToken, setSignupToken] = useState('')
-  const [cardReady, setCardReady] = useState(false)
-  const [card, setCard] = useState(null)
-  const [paying, setPaying] = useState(false)
-  const [payError, setPayError] = useState('')
 
   const handleCheckout = async () => {
     if (!shipData.address || shipData.address.trim().length < 5) {
@@ -166,6 +165,8 @@ export default function FunnelPage() {
       if (state && type === 'bill') setBillData(d => ({...d, state, city: d.city || city}))
     } catch (e) {}
   }
+
+  const handlePay = async () => {
     if (!card) return
     setPaying(true)
     setPayError('')

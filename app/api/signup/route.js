@@ -64,7 +64,6 @@ export async function POST(req) {
           </div>
           <p style="font-size:14px;color:#E8DDD2;line-height:1.7;margin-bottom:20px;">
             Your private checkout link is below. This link is exclusive to you — please do not share it.
-            It will expire in <strong>24 hours</strong>.
           </p>
           <a href="${checkoutLink}" style="display:block;background:#C8A88A;color:#050505;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-align:center;padding:18px;border-radius:8px;text-decoration:none;margin-bottom:24px;">
             Access My Private Checkout →
