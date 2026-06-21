@@ -570,7 +570,9 @@ export default function FunnelPage() {
                   <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'28px',fontWeight:700,color:'var(--gold-light)'}}>$45</span>
                 </div>
                 <p style={checkoutLabelStyle}>Payment Information</p>
-                <div id="card-container" style={{minHeight:'90px',marginBottom:'16px',background:'var(--warm)',borderRadius:'6px',padding:'12px'}} />
+                <div style={{background:'#fff',borderRadius:'8px',padding:'12px',marginBottom:'16px'}}>
+                  <div id="card-container" style={{minHeight:'90px'}} />
+                </div>
                 {!cardReady && <p style={{fontSize:'11px',opacity:0.5,textAlign:'center',marginBottom:'16px'}}>Loading secure payment form...</p>}
                 {payError && <p style={{fontSize:'12px',color:'#ff6b6b',marginBottom:'12px',textAlign:'center'}}>{payError}</p>}
                 <button onClick={handlePay} disabled={!cardReady || paying} style={{...submitBtnStyle, opacity: cardReady && !paying ? 1 : 0.5, cursor: cardReady && !paying ? 'pointer' : 'not-allowed'}}>
