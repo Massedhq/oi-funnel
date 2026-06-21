@@ -145,23 +145,27 @@ export default function FunnelPage() {
     script.onload = async () => {
       try {
         const payments = window.Square.payments('sq0idp-AIJWRKIPpIwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
-        const c = await payments.card({
-          style: {
-            '.input-container': { borderColor: 'rgba(200,168,138,0.3)', borderRadius: '6px' },
-            '.input-container.is-focus': { borderColor: '#C8A88A' },
-            input: { color: '#F3ECE5', fontSize: '13px' },
-            'input::placeholder': { color: 'rgba(232,221,210,0.4)' },
-          }
-        })
+        const c = await payments.card()
         await c.attach('#card-container')
         setCard(c)
         setCardReady(true)
-      } catch (e) { console.error(e) }
+      } catch (e) { console.error('Square error:', e) }
     }
     document.body.appendChild(script)
   }, [checkoutScreen])
 
-  const handlePay = async () => {
+  const lookupZip = async (zip, type) => {
+    if (zip.length !== 5) return
+    try {
+      const res = await fetch(`https://api.zippopotam.us/us/${zip}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const state = data.places?.[0]?.['state abbreviation']
+      const city = data.places?.[0]?.['place name']
+      if (state && type === 'ship') setShipData(d => ({...d, state, city: d.city || city}))
+      if (state && type === 'bill') setBillData(d => ({...d, state, city: d.city || city}))
+    } catch (e) {}
+  }
     if (!card) return
     setPaying(true)
     setPayError('')
@@ -530,7 +534,7 @@ export default function FunnelPage() {
                     <option value="" disabled>State</option>
                     {STATES.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <input placeholder="ZIP Code" value={shipData.zip} onChange={e => setShipData({...shipData, zip: e.target.value})} style={{...inputStyle, marginBottom:0}} />
+                  <input placeholder="ZIP Code" value={shipData.zip} onChange={e => { setShipData({...shipData, zip: e.target.value}); lookupZip(e.target.value, 'ship') }} style={{...inputStyle, marginBottom:0}} />
                 </div>
                 <p style={{...checkoutLabelStyle, marginTop:'14px'}}>Billing Address</p>
                 <label style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'12px',color:'var(--light-beige)',marginBottom:'14px',cursor:'pointer'}}>
@@ -547,7 +551,7 @@ export default function FunnelPage() {
                         <option value="" disabled>State</option>
                         {STATES.map(s => <option key={s}>{s}</option>)}
                       </select>
-                      <input placeholder="ZIP Code" value={billData.zip} onChange={e => setBillData({...billData, zip: e.target.value})} style={{...inputStyle, marginBottom:0}} />
+                      <input placeholder="ZIP Code" value={billData.zip} onChange={e => { setBillData({...billData, zip: e.target.value}); lookupZip(e.target.value, 'bill') }} style={{...inputStyle, marginBottom:0}} />
                     </div>
                   </>
                 )}
