@@ -53,10 +53,14 @@ export async function POST(req, { params }) {
     })
 
     const squareData = await squareRes.json()
+    console.log('Square response:', JSON.stringify(squareData, null, 2))
 
     if (!squareRes.ok || squareData.errors) {
       const msg = squareData.errors?.[0]?.detail || 'Payment failed.'
-      return Response.json({ error: msg }, { status: 400 })
+      const code = squareData.errors?.[0]?.code || 'UNKNOWN'
+      const category = squareData.errors?.[0]?.category || 'UNKNOWN'
+      console.log('Square error:', msg)
+      return Response.json({ error: `${code}: ${msg}`, category, fullError: squareData.errors }, { status: 400 })
     }
 
     // Mark as paid in DB

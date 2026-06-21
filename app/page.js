@@ -144,7 +144,9 @@ export default function FunnelPage() {
     script.onload = async () => {
       try {
         const payments = window.Square.payments('sq0idp-AIJWRKIPpIwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
-        const c = await payments.card()
+        const c = await payments.card({
+          postalCode: false
+        })
         await c.attach('#card-container')
         setCard(c)
         setCardReady(true)
@@ -189,6 +191,7 @@ export default function FunnelPage() {
         document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
       } else {
         setPayError(data.error || 'Payment failed. Please try again.')
+        console.log('Full error:', data)
       }
     } catch (e) {
       setPayError('Something went wrong. Please try again.')
