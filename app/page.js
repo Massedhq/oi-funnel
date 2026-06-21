@@ -36,8 +36,22 @@ export default function FunnelPage() {
   }
 
   const goToShipping = () => {
-    if (!formData.name || !formData.phone || !formData.email || !formData.booster) {
-      alert('Please fill in your contact information and select a wellness booster.')
+    if (!formData.name || formData.name.trim().length < 2) {
+      alert('Please enter your full name.')
+      return
+    }
+    const phoneClean = formData.phone.replace(/\D/g, '')
+    if (phoneClean.length !== 10) {
+      alert('Please enter a valid 10-digit phone number.')
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      alert('Please enter a valid email address.')
+      return
+    }
+    if (!formData.booster) {
+      alert('Please select your wellness booster.')
       return
     }
     if (!smsAgreed) {
@@ -49,9 +63,33 @@ export default function FunnelPage() {
   }
 
   const handleCheckout = async () => {
-    if (!shipData.address || !shipData.city || !shipData.state || !shipData.zip) {
-      alert('Please complete your shipping address.')
+    if (!shipData.address || shipData.address.trim().length < 5) {
+      alert('Please enter a valid street address.')
       return
+    }
+    if (!shipData.city || shipData.city.trim().length < 2) {
+      alert('Please enter a valid city.')
+      return
+    }
+    if (!shipData.state) {
+      alert('Please select your state.')
+      return
+    }
+    const zipClean = shipData.zip.replace(/\D/g, '')
+    if (zipClean.length !== 5) {
+      alert('Please enter a valid 5-digit ZIP code.')
+      return
+    }
+    if (!billSameAsShip) {
+      if (!billData.address || !billData.city || !billData.state) {
+        alert('Please complete your billing address.')
+        return
+      }
+      const billZipClean = billData.zip.replace(/\D/g, '')
+      if (billZipClean.length !== 5) {
+        alert('Please enter a valid billing ZIP code.')
+        return
+      }
     }
     setLoading(true)
     try {
@@ -61,7 +99,7 @@ export default function FunnelPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
-          phone: formData.phone,
+          phone: formData.phone.replace(/\D/g, ''),
           email: formData.email,
           booster: formData.booster,
           ship_address: shipData.address,
