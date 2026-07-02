@@ -59,7 +59,7 @@ export default function CheckoutPage() {
 
     const initSquare = async () => {
       try {
-        const payments = window.Square.payments('sq0idp-AlJWRKlPplwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
+        const payments = window.Square.payments('sq0idp-AIJWRKIPpIwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
         const total = getTotal()
         const paymentRequest = payments.paymentRequest({
           countryCode: 'US', currencyCode: 'USD',
