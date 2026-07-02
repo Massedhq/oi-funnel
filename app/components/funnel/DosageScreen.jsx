@@ -1,13 +1,13 @@
 'use client'
 import { useState } from 'react'
 
-const LADDER = ['2.5mg', '5mg', '7.5mg', '10mg', '12mg', '15mg']
+const LADDER = [2.5, 5, 7.5, 10, 12, 15]
 
 const getOtherProduct = (product) =>
   product === 'MetaTride Ultra' ? 'TriPhase MetaBurn' : 'MetaTride Ultra'
 
 const getNextDose = (current) => {
-  const idx = LADDER.indexOf(current)
+  const idx = LADDER.indexOf(Number(current))
   if (idx === -1 || idx === LADDER.length - 1) return null
   return LADDER[idx + 1]
 }
@@ -16,7 +16,7 @@ export default function DosageScreen({ signup, onNext, onBack }) {
   const [selected, setSelected] = useState(null)
 
   const currentProduct = signup?.booster || 'MetaTride Ultra'
-  const currentDose = signup?.current_dosage || '2.5mg'
+  const currentDose = Number(signup?.current_dosage) || 2.5
   const orderCount = signup?.order_count || 0
   const nextDose = getNextDose(currentDose)
   const otherProduct = getOtherProduct(currentProduct)
@@ -29,7 +29,7 @@ export default function DosageScreen({ signup, onNext, onBack }) {
           Your journey begins at 2.5mg on {currentProduct}™.
         </p>
         <button
-          onClick={() => onNext({ product: currentProduct, dose: '2.5mg' })}
+          onClick={() => onNext({ product: currentProduct, dose: 2.5 })}
           style={{ ...primaryBtnStyle, background: '#C8A88A', color: '#050505', cursor: 'pointer' }}
         >
           Continue →
@@ -40,15 +40,15 @@ export default function DosageScreen({ signup, onNext, onBack }) {
 
   const options = [
     { key: 'stay', product: currentProduct, dose: currentDose,
-      label: `Stay on ${currentProduct}`, desc: `Continue at ${currentDose}` },
+      label: `Stay on ${currentProduct}`, desc: `Continue at ${currentDose}mg` },
     { key: 'switch', product: otherProduct, dose: currentDose,
-      label: `Switch to ${otherProduct}`, desc: `Same dose, new formula — ${currentDose}` },
+      label: `Switch to ${otherProduct}`, desc: `Same dose, new formula — ${currentDose}mg` },
   ]
 
   if (nextDose) {
     options.push({
       key: 'continue', product: currentProduct, dose: nextDose,
-      label: `Move up to ${nextDose}`, desc: `Step up on ${currentProduct}`,
+      label: `Move up to ${nextDose}mg`, desc: `Step up on ${currentProduct}`,
     })
   }
 
@@ -56,7 +56,7 @@ export default function DosageScreen({ signup, onNext, onBack }) {
     <div style={cardStyle}>
       <div style={{ border: '1px solid rgba(200,168,138,0.2)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
         <p style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.5, color: '#E8DDD2', marginBottom: '3px' }}>Currently On</p>
-        <p style={{ fontSize: '14px', color: '#D8C3B3', fontWeight: 600 }}>{currentProduct}™ — {currentDose}</p>
+        <p style={{ fontSize: '14px', color: '#D8C3B3', fontWeight: 600 }}>{currentProduct}™ — {currentDose}mg</p>
       </div>
 
       <span style={labelStyle}>Choose Your Next Order</span>

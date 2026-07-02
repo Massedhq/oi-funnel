@@ -197,7 +197,6 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* JOURNEY COMPLETE — redirect to final checkout link */}
         {screen==='journeycomplete' && (
           <div style={{...cardStyle,textAlign:'center'}}>
             <p style={{...headStyle,marginBottom:'12px'}}>You've completed your full dosage journey!</p>
@@ -207,7 +206,6 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* REVIEW GATE */}
         {screen==='review' && (
           <ReviewGateScreen
             token={token}
@@ -218,7 +216,6 @@ export default function CheckoutPage() {
           />
         )}
 
-        {/* DOSAGE */}
         {screen==='dosage' && (
           <DosageScreen
             signup={signup}
@@ -227,7 +224,6 @@ export default function CheckoutPage() {
           />
         )}
 
-        {/* SUPPLIES */}
         {screen==='supplies' && (
           <SuppliesScreen
             onNext={(selectedSupplies) => { setSupplies(selectedSupplies); setScreen('shipping') }}
@@ -235,7 +231,6 @@ export default function CheckoutPage() {
           />
         )}
 
-        {/* SHIPPING */}
         {screen==='shipping' && (
           <div style={cardStyle}>
             <span style={labelStyle}>Shipping Address</span>
@@ -276,13 +271,12 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* PAYMENT */}
         {screen==='payment' && (
           <div style={cardStyle}>
             <div style={{border:'1px solid rgba(200,168,138,0.2)',borderRadius:'8px',padding:'12px 16px',marginBottom:'16px'}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'4px'}}>
                 <span style={{fontSize:'13px',color:'#D8C3B3',fontWeight:600}}>
-                  {selectedProduct || signup?.booster}™{selectedDose ? ` — ${selectedDose}` : ''}
+                  {selectedProduct || signup?.booster}™{selectedDose ? ` — ${selectedDose}mg` : ''}
                 </span>
                 <span style={{fontSize:'13px',color:'#D8C3B3'}}>$45.00</span>
               </div>
@@ -324,7 +318,6 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* SUCCESS */}
         {screen==='success' && (
           <div style={{...cardStyle,textAlign:'center'}}>
             <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'22px',fontStyle:'italic',color:'#D8C3B3',marginBottom:'16px'}}>Order Complete! ✳️</p>

@@ -17,20 +17,16 @@ export async function POST(request, { params }) {
             ship_address, ship_address2, ship_city, ship_state, ship_zip,
             bill_address, bill_city, bill_state, bill_zip } = body
 
-    // --- Fetch signup record ---
     const rows = await sql`SELECT * FROM signups WHERE token = ${token} LIMIT 1`
     if (!rows.length) return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
     const signup = rows[0]
 
-    // --- Normalize order_count ---
     const currentOrderCount = parseInt(signup.order_count) || 0
 
-    // --- Guard: max orders ---
     if (currentOrderCount >= MAX_ORDERS) {
       return NextResponse.json({ error: 'Maximum orders reached' }, { status: 410 })
     }
 
-    // --- Guard: 1 order per month ---
     if (signup.last_order_date) {
       const last = new Date(signup.last_order_date)
       const now  = new Date()
@@ -40,24 +36,19 @@ export async function POST(request, { params }) {
       }
     }
 
-    // --- Guard: review required ---
     if (signup.review_required && !signup.review_submitted) {
       return NextResponse.json({ error: 'Please submit your review before ordering again.' }, { status: 403 })
     }
 
-    // --- Product/dose being ordered this time ---
     const finalProduct = product || signup.booster
-    const finalDose    = dose || signup.current_dosage || '2.5mg'
+    const finalDose    = dose || signup.current_dosage || 2.5
 
-    // --- Build Square note ---
     const rawNote = note || `OI Body Chemistry - ${finalProduct} - ${signup.name}`
     const safeNote = rawNote.substring(0, 45)
 
-    // --- Build idempotency key ---
     const nextOrder = currentOrderCount + 1
     const idempotencyKey = `${token.substring(0, 24)}-${nextOrder}-${Date.now().toString().slice(-8)}`
 
-    // --- Charge via Square ---
     const squareEnv = process.env.SQUARE_ENV === 'production'
       ? 'https://connect.squareup.com'
       : 'https://connect.squareupsandbox.com'
@@ -90,7 +81,6 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: errMsg }, { status: 400 })
     }
 
-    // --- Update DB ---
     const newOrderCount = currentOrderCount + 1
     const isFirstOrder  = currentOrderCount === 0
 
@@ -146,7 +136,7 @@ export async function POST(request, { params }) {
           <p>Name: ${signup.name}</p>
           <p>Email: ${signup.email}</p>
           <p>Phone: ${signup.phone}</p>
-          <p>Booster: ${finalProduct} — ${finalDose}</p>
+          <p>Booster: ${finalProduct} — ${finalDose}mg</p>
           <p>Supplies: ${supplies}</p>
           <p>Amount: $${(parseInt(amount) / 100).toFixed(2)}</p>
           <p>Ship to: ${finalShipAddress}, ${finalShipCity}, ${finalShipState} ${finalShipZip}</p>
@@ -157,7 +147,6 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: true })
     }
 
-    // Returning order
     await sql`
       UPDATE signups SET
         order_count      = ${newOrderCount},
@@ -180,7 +169,7 @@ export async function POST(request, { params }) {
       html: `
         <p>Hi ${signup.name},</p>
         <p>Your Order ${newOrderCount} of ${MAX_ORDERS} is confirmed! 🎉</p>
-        <p>Booster: ${finalProduct} — ${finalDose}</p>
+        <p>Booster: ${finalProduct} — ${finalDose}mg</p>
         <p>Amount: $${(parseInt(amount) / 100).toFixed(2)}</p>
         <p>Your order will ship soon. We'll be in touch!</p>
         <p>— OI Body Chemistry Team</p>
@@ -195,7 +184,7 @@ export async function POST(request, { params }) {
         <p><strong>Returning Order</strong></p>
         <p>Name: ${signup.name}</p>
         <p>Email: ${signup.email}</p>
-        <p>Booster: ${finalProduct} — ${finalDose}</p>
+        <p>Booster: ${finalProduct} — ${finalDose}mg</p>
         <p>Supplies: ${supplies}</p>
         <p>Amount: $${(parseInt(amount) / 100).toFixed(2)}</p>
         <p>Ship to: ${finalShipAddress}, ${finalShipCity}, ${finalShipState} ${finalShipZip}</p>
