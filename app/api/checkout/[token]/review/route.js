@@ -28,7 +28,8 @@ export async function POST(req, { params }) {
       UPDATE signups
       SET review_submitted = true,
           review_rating = ${rating},
-          review_text = ${review_text}
+          review_text = ${review_text},
+          review_submitted_at = NOW()
       WHERE id = ${id}
     `
 

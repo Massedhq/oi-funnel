@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import ContactScreen from './components/funnel/ContactScreen'
+import ReviewFeed from './components/funnel/ReviewFeed'
 import ShippingScreen from './components/funnel/ShippingScreen'
 import PaymentScreen from './components/funnel/PaymentScreen'
 import ConfirmationScreen from './components/funnel/ConfirmationScreen'
