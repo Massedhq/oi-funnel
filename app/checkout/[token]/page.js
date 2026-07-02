@@ -59,7 +59,7 @@ export default function CheckoutPage() {
 
     const initSquare = async () => {
       try {
-        const payments = window.Square.payments('sandbox-sq0idb-eRGofW4DzY5eJtTS6eGPpw', 'LQA2D2J5740ZV')
+        const payments = window.Square.payments('sq0idp-AlJWRKlPplwC4CPk3q4Qdw', 'LQA2D2J5740ZV')
         const total = getTotal()
         const paymentRequest = payments.paymentRequest({
           countryCode: 'US', currencyCode: 'USD',
@@ -85,7 +85,7 @@ export default function CheckoutPage() {
     const timer = setTimeout(() => {
       if (window.Square) { initSquare() } else {
         const script = document.createElement('script')
-        script.src = 'https://sandbox.web.squarecdn.com/v1/square.js'
+        script.src = 'https://web.squarecdn.com/v1/square.js'
         script.onload = initSquare
         document.body.appendChild(script)
       }
@@ -302,7 +302,7 @@ export default function CheckoutPage() {
               <div style={{flex:1,height:'1px',background:'rgba(200,168,138,0.2)'}}/>
             </div>
             <div style={{background:'#fff',borderRadius:'8px',padding:'12px',marginBottom:'16px'}}>
-              <div id="card-container" style={{minHeight:'90px'}}/>
+              <div id="card-container" style={{minHeight:'160px'}}/>
             </div>
             {!cardReady && <p style={{fontSize:'11px',opacity:0.5,textAlign:'center',marginBottom:'16px',color:'#E8DDD2'}}>Loading secure payment form...</p>}
             {payError && <p style={{fontSize:'12px',color:'#ff6b6b',marginBottom:'12px',textAlign:'center'}}>{payError}</p>}
