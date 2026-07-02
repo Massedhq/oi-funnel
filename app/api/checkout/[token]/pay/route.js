@@ -17,7 +17,11 @@ export async function POST(request, { params }) {
             ship_address, ship_address2, ship_city, ship_state, ship_zip,
             bill_address, bill_city, bill_state, bill_zip } = body
 
-    const rows = await sql`SELECT * FROM signups WHERE token = ${token} LIMIT 1`
+    const rows = await sql`
+      SELECT * FROM signups
+      WHERE private_token = ${token} OR (token = ${token} AND paid = true)
+      LIMIT 1
+    `
     if (!rows.length) return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
     const signup = rows[0]
 
@@ -108,7 +112,7 @@ export async function POST(request, { params }) {
           ship_city        = ${finalShipCity},
           ship_state       = ${finalShipState},
           ship_zip         = ${finalShipZip}
-        WHERE token = ${token}
+        WHERE private_token = ${token} OR (token = ${token} AND paid = true)
       `
 
       const privateLink = `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/${privateToken}`
@@ -159,7 +163,7 @@ export async function POST(request, { params }) {
         ship_city        = ${finalShipCity},
         ship_state       = ${finalShipState},
         ship_zip         = ${finalShipZip}
-      WHERE token = ${token}
+      WHERE private_token = ${token} OR (token = ${token} AND paid = true)
     `
 
     await resend.emails.send({
