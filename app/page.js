@@ -1,5 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
+import ContactScreen from './components/funnel/ContactScreen'
+import ShippingScreen from './components/funnel/ShippingScreen'
+import PaymentScreen from './components/funnel/PaymentScreen'
+import ConfirmationScreen from './components/funnel/ConfirmationScreen'
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
 
@@ -19,11 +23,6 @@ export default function FunnelPage() {
   const [billSameAsShip, setBillSameAsShip] = useState(true)
   const [loading, setLoading] = useState(false)
   const [signupToken, setSignupToken] = useState('')
-  const [cardReady, setCardReady] = useState(false)
-  const [card, setCard] = useState(null)
-  const [paying, setPaying] = useState(false)
-  const [payError, setPayError] = useState('')
-  const [squareInitialized, setSquareInitialized] = useState(false)
 
   useEffect(() => {
     fetch('/api/spots')
@@ -41,38 +40,7 @@ export default function FunnelPage() {
     document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const getTotal = () => {
-    const s = formData.supplies
-    return s === 'single' ? '55.65' : s === 'monthly' ? '60.90' : '53.90'
-  }
-
-  const getTotalCents = () => {
-    const s = formData.supplies
-    return s === 'single' ? 5565 : s === 'monthly' ? 6090 : 5390
-  }
-
-  const goToShipping = () => {
-    if (!formData.name || formData.name.trim().length < 2) { alert('Please enter your full name.'); return }
-    const phoneClean = formData.phone.replace(/\D/g, '')
-    if (phoneClean.length !== 10) { alert('Please enter a valid 10-digit phone number.'); return }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return }
-    if (!formData.booster) { alert('Please select your wellness booster.'); return }
-    if (!smsAgreed) { alert('Please agree to the Terms and Conditions to continue.'); return }
-    setCheckoutScreen(2)
-    document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   const handleCheckout = async () => {
-    if (!shipData.address || shipData.address.trim().length < 5) { alert('Please enter a valid street address.'); return }
-    if (!shipData.city || shipData.city.trim().length < 2) { alert('Please enter a valid city.'); return }
-    if (!shipData.state) { alert('Please select your state.'); return }
-    const zipClean = shipData.zip.replace(/\D/g, '')
-    if (zipClean.length !== 5) { alert('Please enter a valid 5-digit ZIP code.'); return }
-    if (!billSameAsShip) {
-      if (!billData.address || !billData.city || !billData.state) { alert('Please complete your billing address.'); return }
-      if (billData.zip.replace(/\D/g, '').length !== 5) { alert('Please enter a valid billing ZIP code.'); return }
-    }
     setLoading(true)
     try {
       const billing = billSameAsShip ? shipData : billData
@@ -111,116 +79,6 @@ export default function FunnelPage() {
       alert('Network error — please check your connection and try again.')
     } finally {
       setLoading(false)
-    }
-  }
-
-  // Square init — fires when checkoutScreen hits 3 and token is ready
-  useEffect(() => {
-    if (checkoutScreen !== 3 || squareInitialized || !signupToken) return
-
-    const initSquare = async () => {
-      try {
-        const payments = window.Square.payments('sandbox-sq0idb-eRGofW4DzY5eJtTS6eGPpw', 'LQA2D2J5740ZV')
-
-        const total = getTotal()
-
-        const paymentRequest = payments.paymentRequest({
-          countryCode: 'US',
-          currencyCode: 'USD',
-          total: { amount: total, label: 'OI Body Chemistry' },
-        })
-
-        // Card
-        const c = await payments.card()
-        await c.attach('#card-container')
-        setCard(c)
-        setCardReady(true)
-
-        // Apple Pay
-        try {
-          const applePay = await payments.applePay(paymentRequest)
-          await applePay.attach('#apple-pay-button')
-        } catch (e) { console.log('Apple Pay not available') }
-
-        // Google Pay
-        try {
-          const googlePay = await payments.googlePay(paymentRequest)
-          await googlePay.attach('#google-pay-button')
-        } catch (e) { console.log('Google Pay not available') }
-
-        // Cash App Pay
-        try {
-          const cashApp = await payments.cashAppPay(paymentRequest, {
-            redirectURL: window.location.href,
-            referenceId: `oi-${signupToken.substring(0, 20)}`,
-          })
-          await cashApp.attach('#cash-app-pay')
-        } catch (e) { console.log('Cash App Pay not available') }
-
-        setSquareInitialized(true)
-      } catch (e) { console.error('Square init error:', e) }
-    }
-
-    if (window.Square) {
-      initSquare()
-    } else {
-      const script = document.createElement('script')
-      script.src = 'https://sandbox.web.squarecdn.com/v1/square.js'
-      script.onload = initSquare
-      document.body.appendChild(script)
-    }
-  }, [checkoutScreen, signupToken])
-
-  const lookupZip = async (zip, type) => {
-    if (zip.length !== 5) return
-    try {
-      const res = await fetch(`https://api.zippopotam.us/us/${zip}`)
-      if (!res.ok) return
-      const data = await res.json()
-      const state = data.places?.[0]?.['state abbreviation']
-      const city = data.places?.[0]?.['place name']
-      if (state && type === 'ship') setShipData(d => ({ ...d, state, city: d.city || city }))
-      if (state && type === 'bill') setBillData(d => ({ ...d, state, city: d.city || city }))
-    } catch (e) {}
-  }
-
-  const handlePay = async () => {
-    if (!card) return
-    setPaying(true)
-    setPayError('')
-    try {
-      const result = await card.tokenize()
-      if (result.status !== 'OK') {
-        setPayError(result.errors?.map(e => e.message).join(', ') || 'Please check your card details.')
-        setPaying(false)
-        return
-      }
-      const supplies = formData.supplies || 'none'
-      const amount = getTotalCents()
-      // note field capped at 45 chars to satisfy Square API limit
-      const noteLine = `OI Body Chemistry - ${formData.booster} - ${formData.name}`.substring(0, 45)
-      const res = await fetch(`/api/checkout/${signupToken}/pay`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourceId: result.token,
-          supplies,
-          amount,
-          note: noteLine,
-        }),
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setSubmitted(true)
-        setCheckoutScreen(4)
-        document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
-      } else {
-        setPayError(data.error || 'Payment failed. Please try again.')
-      }
-    } catch (e) {
-      setPayError('Something went wrong. Please try again.')
-    } finally {
-      setPaying(false)
     }
   }
 
@@ -265,7 +123,6 @@ export default function FunnelPage() {
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', padding:'24px', background:'var(--black)' }}>
           <div style={{ width:'100%', maxWidth:'480px' }}>
 
-            {/* Screen 1: Age Verification */}
             {screen === 1 && (
               <div style={screenStyle}>
                 <div style={ageIconStyle}>
@@ -295,7 +152,6 @@ export default function FunnelPage() {
               </div>
             )}
 
-            {/* Screen 2: Readiness */}
             {screen === 2 && (
               <div style={screenStyle}>
                 <ProgressDots current={1} />
@@ -310,7 +166,6 @@ export default function FunnelPage() {
               </div>
             )}
 
-            {/* Screen 3: Goal */}
             {screen === 3 && (
               <div style={screenStyle}>
                 <ProgressDots current={2} />
@@ -325,7 +180,6 @@ export default function FunnelPage() {
               </div>
             )}
 
-            {/* Screen 4: Transition */}
             {screen === 4 && (
               <div style={screenStyle}>
                 <ProgressDots current={3} />
@@ -515,182 +369,49 @@ export default function FunnelPage() {
           <div id="join-section" style={{padding:'56px 20px 32px',background:'var(--black)',color:'var(--white)'}}>
             <p style={sectionLabelStyle}>Limited Enrollment</p>
             <h2 style={sectionTitleStyle}>Begin Your <em style={{fontStyle:'italic',color:'var(--gold-light)'}}>Journey</em></h2>
-            <p style={sectionSubStyle}>Select your wellness booster, complete your order, and your private link will be emailed to you after payment is confirmed.</p>
 
-            {/* SCREEN 1 — Contact + Booster */}
             {!capacityFull && !submitted && checkoutScreen === 1 && (
-              <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'20px'}}>
-                <div style={{textAlign:'center',marginBottom:'18px'}}>
-                  <div style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'48px',fontWeight:700,color:'var(--gold-light)',lineHeight:1}}>{remaining}</div>
-                  <div style={{fontSize:'9px',letterSpacing:'0.2em',textTransform:'uppercase',opacity:0.5,marginTop:'4px'}}>Spots Remaining</div>
-                </div>
-                <p style={checkoutLabelStyle}>Contact Information</p>
-                {['name','phone','email'].map(field => (
-                  <input key={field} type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'} placeholder={field === 'name' ? 'Full Name' : field === 'phone' ? 'Phone Number' : 'Email Address'} value={formData[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} style={inputStyle} />
-                ))}
-                <p style={{...checkoutLabelStyle, marginTop:'14px'}}>Select Your Wellness Booster</p>
-                <select value={formData.booster} onChange={e => setFormData({...formData, booster: e.target.value})} style={{...inputStyle, appearance:'none', backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C8A88A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat:'no-repeat', backgroundPosition:'right 14px center', cursor:'pointer'}}>
-                  <option value="" disabled>Choose Your Booster</option>
-                  <option value="MetaTride Ultra">MetaTride Ultra™</option>
-                  <option value="TriPhase MetaBurn">TriPhase MetaBurn™</option>
-                </select>
-                {formData.booster && (
-                  <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px 18px',marginBottom:'14px',display:'flex',flexDirection:'column',alignItems:'flex-start'}}>
-                    <span style={{fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--light-beige)',opacity:0.6}}>Monthly Investment</span>
-                    <span style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'44px',fontWeight:600,color:'var(--gold-light)',lineHeight:1}}>$45</span>
-                    <span style={{fontSize:'10px',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--light-beige)',opacity:0.6,marginTop:'2px'}}>Per Month · Cancel Anytime</span>
-                  </div>
-                )}
-                <label style={{display:'flex',alignItems:'flex-start',gap:'8px',fontSize:'10px',opacity:0.6,margin:'12px 0 16px',lineHeight:1.6,cursor:'pointer'}}>
-                  <input type="checkbox" checked={smsAgreed} onChange={e => setSmsAgreed(e.target.checked)} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
-                  <span>I agree to receive SMS with my exclusive checkout link and agree to the <span onClick={() => setPrivacyOpen(true)} style={legalLinkStyle}>Privacy Policy</span> and <span onClick={() => setTermsOpen(true)} style={legalLinkStyle}>Terms of Service</span>.</span>
-                </label>
-                <button onClick={goToShipping} style={submitBtnStyle}>Secure Checkout →</button>
-                <p style={{textAlign:'center',fontSize:'9px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase'}}>Secure · Discreet · Cancel Anytime</p>
-              </div>
+              <ContactScreen
+                formData={formData}
+                setFormData={setFormData}
+                smsAgreed={smsAgreed}
+                setSmsAgreed={setSmsAgreed}
+                remaining={remaining}
+                onNext={() => setCheckoutScreen(2)}
+                setPrivacyOpen={setPrivacyOpen}
+                setTermsOpen={setTermsOpen}
+              />
             )}
 
-            {/* SCREEN 2 — Shipping + Billing */}
             {!capacityFull && !submitted && checkoutScreen === 2 && (
-              <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'20px'}}>
-                <p style={checkoutLabelStyle}>Shipping Address</p>
-                <input placeholder="Street Address" value={shipData.address} onChange={e => setShipData({...shipData, address: e.target.value})} style={inputStyle} />
-                <input placeholder="Apt, Suite, Unit (optional)" value={shipData.address2} onChange={e => setShipData({...shipData, address2: e.target.value})} style={inputStyle} />
-                <input placeholder="City" value={shipData.city} onChange={e => setShipData({...shipData, city: e.target.value})} style={inputStyle} />
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
-                  <select value={shipData.state} onChange={e => setShipData({...shipData, state: e.target.value})} style={{...inputStyle, marginBottom:0, appearance:'none', backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C8A88A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat:'no-repeat', backgroundPosition:'right 10px center', cursor:'pointer'}}>
-                    <option value="" disabled>State</option>
-                    {STATES.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                  <input placeholder="ZIP Code" value={shipData.zip} onChange={e => { setShipData({...shipData, zip: e.target.value}); lookupZip(e.target.value, 'ship') }} style={{...inputStyle, marginBottom:0}} />
-                </div>
-                <p style={{...checkoutLabelStyle, marginTop:'14px'}}>Billing Address</p>
-                <label style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'12px',color:'var(--light-beige)',marginBottom:'14px',cursor:'pointer'}}>
-                  <input type="checkbox" checked={billSameAsShip} onChange={e => setBillSameAsShip(e.target.checked)} style={{accentColor:'var(--gold)'}} />
-                  Same as shipping address
-                </label>
-                {!billSameAsShip && (
-                  <>
-                    <input placeholder="Street Address" value={billData.address} onChange={e => setBillData({...billData, address: e.target.value})} style={inputStyle} />
-                    <input placeholder="Apt, Suite, Unit (optional)" value={billData.address2} onChange={e => setBillData({...billData, address2: e.target.value})} style={inputStyle} />
-                    <input placeholder="City" value={billData.city} onChange={e => setBillData({...billData, city: e.target.value})} style={inputStyle} />
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
-                      <select value={billData.state} onChange={e => setBillData({...billData, state: e.target.value})} style={{...inputStyle, marginBottom:0, appearance:'none', backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C8A88A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat:'no-repeat', backgroundPosition:'right 10px center', cursor:'pointer'}}>
-                        <option value="" disabled>State</option>
-                        {STATES.map(s => <option key={s}>{s}</option>)}
-                      </select>
-                      <input placeholder="ZIP Code" value={billData.zip} onChange={e => { setBillData({...billData, zip: e.target.value}); lookupZip(e.target.value, 'bill') }} style={{...inputStyle, marginBottom:0}} />
-                    </div>
-                  </>
-                )}
-                <button onClick={handleCheckout} disabled={loading} style={{...submitBtnStyle, opacity: loading ? 0.7 : 1, marginTop:'8px'}}>
-                  {loading ? 'Processing...' : 'Complete Order →'}
-                </button>
-                <button onClick={() => setCheckoutScreen(1)} style={{width:'100%',background:'transparent',border:'none',color:'var(--gold)',fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',padding:'12px',cursor:'pointer',marginTop:'6px'}}>← Back</button>
-                <p style={{textAlign:'center',fontSize:'9px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase'}}>Secure · Discreet · Cancel Anytime</p>
-              </div>
+              <ShippingScreen
+                shipData={shipData}
+                setShipData={setShipData}
+                billData={billData}
+                setBillData={setBillData}
+                billSameAsShip={billSameAsShip}
+                setBillSameAsShip={setBillSameAsShip}
+                loading={loading}
+                onNext={handleCheckout}
+                onBack={() => setCheckoutScreen(1)}
+              />
             )}
 
-            {/* SCREEN 3 — Payment */}
             {!capacityFull && !submitted && checkoutScreen === 3 && (
-              <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'20px'}}>
-                <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px 18px',marginBottom:'16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <div>
-                    <p style={{fontSize:'10px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.5,marginBottom:'4px'}}>Your Selection</p>
-                    <p style={{fontSize:'14px',color:'var(--gold-light)',fontWeight:600}}>{formData.booster}™</p>
-                  </div>
-                  <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'28px',fontWeight:700,color:'var(--gold-light)'}}>$45</span>
-                </div>
-
-                {/* SUPPLIES UPSELL */}
-                <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px',marginBottom:'16px'}}>
-                  <p style={{fontSize:'10px',fontWeight:600,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--gold)',marginBottom:'10px'}}>Add On — Supplies</p>
-                  <label style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'8px',cursor:'pointer'}}>
-                    <input type="radio" name="supplies" value="none" checked={formData.supplies === 'none' || !formData.supplies} onChange={() => setFormData({...formData, supplies: 'none'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
-                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>No thanks</span>
-                  </label>
-                  <label style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'8px',cursor:'pointer'}}>
-                    <input type="radio" name="supplies" value="single" checked={formData.supplies === 'single'} onChange={() => setFormData({...formData, supplies: 'single'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
-                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>Syringes & Alcohol Pads — Single Supply <span style={{color:'var(--gold)',fontWeight:600}}>+$1.75</span></span>
-                  </label>
-                  <label style={{display:'flex',alignItems:'flex-start',gap:'10px',cursor:'pointer'}}>
-                    <input type="radio" name="supplies" value="monthly" checked={formData.supplies === 'monthly'} onChange={() => setFormData({...formData, supplies: 'monthly'})} style={{marginTop:'2px',accentColor:'var(--gold)'}} />
-                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>Syringes & Alcohol Pads — Month Supply <span style={{color:'var(--gold)',fontWeight:600}}>+$7.00</span></span>
-                  </label>
-                </div>
-
-                {/* ORDER TOTAL */}
-                <div style={{marginBottom:'16px',paddingBottom:'12px',borderBottom:'1px solid var(--border)'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
-                    <span style={{fontSize:'12px',opacity:0.6}}>Booster</span>
-                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$45.00</span>
-                  </div>
-                  {formData.supplies === 'single' && (
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
-                      <span style={{fontSize:'12px',opacity:0.6}}>Single Supplies</span>
-                      <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$1.75</span>
-                    </div>
-                  )}
-                  {formData.supplies === 'monthly' && (
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
-                      <span style={{fontSize:'12px',opacity:0.6}}>Monthly Supplies</span>
-                      <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$7.00</span>
-                    </div>
-                  )}
-                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'10px'}}>
-                    <span style={{fontSize:'12px',opacity:0.6}}>Shipping</span>
-                    <span style={{fontSize:'12px',color:'var(--light-beige)'}}>$8.90</span>
-                  </div>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderTop:'1px solid var(--border)',paddingTop:'10px'}}>
-                    <span style={{fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.6}}>Total</span>
-                    <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:700,color:'var(--gold-light)'}}>
-                      ${getTotal()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* PAYMENT METHODS */}
-                <p style={checkoutLabelStyle}>Payment Information</p>
-                <div id="apple-pay-button" style={{marginBottom:'8px'}}/>
-                <div id="google-pay-button" style={{marginBottom:'8px'}}/>
-                <div id="cash-app-pay" style={{marginBottom:'12px'}}/>
-                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}>
-                  <div style={{flex:1,height:'1px',background:'var(--border)'}}/>
-                  <span style={{fontSize:'10px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase'}}>or pay with card</span>
-                  <div style={{flex:1,height:'1px',background:'var(--border)'}}/>
-                </div>
-                <div style={{background:'#fff',borderRadius:'8px',padding:'12px',marginBottom:'16px'}}>
-                  <div id="card-container" style={{minHeight:'90px'}} />
-                </div>
-                {!cardReady && <p style={{fontSize:'11px',opacity:0.5,textAlign:'center',marginBottom:'16px'}}>Loading secure payment form...</p>}
-                {payError && <p style={{fontSize:'12px',color:'#ff6b6b',marginBottom:'12px',textAlign:'center'}}>{payError}</p>}
-                <button onClick={handlePay} disabled={!cardReady || paying} style={{...submitBtnStyle, opacity: cardReady && !paying ? 1 : 0.5, cursor: cardReady && !paying ? 'pointer' : 'not-allowed'}}>
-                  {paying ? 'Processing...' : `Complete Order — $${getTotal()}`}
-                </button>
-                <button onClick={() => setCheckoutScreen(2)} style={{width:'100%',background:'transparent',border:'none',color:'var(--gold)',fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',padding:'12px',cursor:'pointer',marginTop:'6px'}}>← Back</button>
-                <p style={{textAlign:'center',fontSize:'9px',opacity:0.4,letterSpacing:'0.1em',textTransform:'uppercase',marginTop:'8px'}}>Secured by Square · SSL Encrypted</p>
-              </div>
+              <PaymentScreen
+                formData={formData}
+                signupToken={signupToken}
+                onBack={() => setCheckoutScreen(2)}
+                onSuccess={() => {
+                  setSubmitted(true)
+                  setCheckoutScreen(4)
+                  document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              />
             )}
 
-            {/* SCREEN 4 — Success */}
-            {submitted && (
-              <div style={{border:'1px solid var(--border)',borderRadius:'12px',padding:'32px 20px',textAlign:'center'}}>
-                <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'22px',fontStyle:'italic',color:'var(--gold-light)',marginBottom:'16px'}}>You are In! ✳️</p>
-                <p style={{fontSize:'13px',color:'var(--light-beige)',lineHeight:1.7,marginBottom:'24px'}}>Congratulations on making the first step to your new identity journey on becoming. Your private checkout link has been sent to your email.</p>
-                <a href="https://www.facebook.com/share/g/17tA4EgWx8/" target="_blank" rel="noreferrer" style={{display:'block',width:'100%',background:'transparent',border:'1px solid var(--gold)',color:'var(--gold)',fontSize:'11px',fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',textAlign:'center',padding:'16px',borderRadius:'6px',textDecoration:'none'}}>Join Our Private Group →</a>
-              </div>
-            )}
-
-            {/* CAPACITY FULL */}
-            {capacityFull && !submitted && (
-              <div style={{border:'1px solid var(--gold)',borderRadius:'12px',padding:'24px 20px',textAlign:'center'}}>
-                <h3 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'20px',fontWeight:600,marginBottom:'10px'}}>{"We've Reached Our Current Inventory Capacity"}</h3>
-                <p style={{fontSize:'12px',opacity:0.7,lineHeight:1.7,marginBottom:'18px'}}>You may proceed to preorder ahead — our next shipment is already en route. Your order will ship within 24 hours of arrival. (No shipping on Sundays.)</p>
-                <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
-                  <button style={{background:'var(--gold)',color:'var(--black)',fontSize:'12px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'14px',borderRadius:'6px',border:'none',cursor:'pointer'}}>Preorder Now</button>
-                  <button style={{background:'transparent',color:'var(--gold)',fontSize:'12px',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',padding:'14px',borderRadius:'6px',border:'1px solid var(--gold)',cursor:'pointer'}}>Join the Waiting List</button>
-                </div>
-              </div>
+            {(submitted || capacityFull) && (
+              <ConfirmationScreen submitted={submitted} capacityFull={capacityFull} />
             )}
           </div>
 
@@ -813,6 +534,3 @@ const sectionLabelStyle = { fontSize:'10px',fontWeight:600,letterSpacing:'0.2em'
 const sectionTitleStyle = { fontFamily:"'Cormorant Garamond', serif",fontSize:'26px',fontWeight:600,lineHeight:1.2,textAlign:'center',marginBottom:'10px' }
 const sectionSubStyle = { fontSize:'12px',textAlign:'center',lineHeight:1.7,opacity:0.65,maxWidth:'340px',margin:'0 auto 28px' }
 const modalH3Style = { fontFamily:"'Cormorant Garamond', serif",fontSize:'16px',fontWeight:600,color:'var(--black)',margin:'20px 0 8px' }
-const inputStyle = { width:'100%',background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'6px',padding:'13px 14px',color:'var(--white)',fontSize:'13px',marginBottom:'10px',fontFamily:"'DM Sans', sans-serif",outline:'none' }
-const submitBtnStyle = { display:'block',width:'100%',background:'var(--gold)',color:'var(--black)',fontSize:'13px',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',textAlign:'center',padding:'15px',borderRadius:'6px',border:'none',cursor:'pointer',marginBottom:'10px' }
-const checkoutLabelStyle = { fontSize:'10px',fontWeight:600,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--gold)',marginBottom:'10px' }

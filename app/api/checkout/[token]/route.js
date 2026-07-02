@@ -7,7 +7,7 @@ export async function GET(req, { params }) {
     const { token } = params
     // Look up by private_token (generated after payment) OR session token
     const rows = await sql`
-      SELECT name, email, booster, ship_address, ship_address2, ship_city, ship_state, ship_zip,
+      SELECT name, email, booster, current_dosage, ship_address, ship_address2, ship_city, ship_state, ship_zip,
              bill_address, bill_city, bill_state, bill_zip, paid, order_count, review_required, review_submitted
       FROM signups WHERE private_token = ${token} OR (token = ${token} AND paid = true)
     `
