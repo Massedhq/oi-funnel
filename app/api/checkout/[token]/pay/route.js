@@ -19,7 +19,7 @@ export async function POST(request, { params }) {
 
     const rows = await sql`
       SELECT * FROM signups
-      WHERE private_token = ${token} OR (token = ${token} AND paid = true)
+      WHERE private_token = ${token} OR token = ${token}
       LIMIT 1
     `
     if (!rows.length) return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
@@ -112,7 +112,7 @@ export async function POST(request, { params }) {
           ship_city        = ${finalShipCity},
           ship_state       = ${finalShipState},
           ship_zip         = ${finalShipZip}
-        WHERE private_token = ${token} OR (token = ${token} AND paid = true)
+        WHERE private_token = ${token} OR token = ${token}
       `
 
       const privateLink = `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/${privateToken}`
@@ -163,7 +163,7 @@ export async function POST(request, { params }) {
         ship_city        = ${finalShipCity},
         ship_state       = ${finalShipState},
         ship_zip         = ${finalShipZip}
-      WHERE private_token = ${token} OR (token = ${token} AND paid = true)
+      WHERE private_token = ${token} OR token = ${token}
     `
 
     await resend.emails.send({
