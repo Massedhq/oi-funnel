@@ -211,12 +211,7 @@ export default function FunnelPage() {
           </nav>
 
           {/* STARS */}
-          <div style={{background:'var(--black)',padding:'16px 20px 0',display:'flex',alignItems:'center',gap:'10px'}}>
-            <div style={{display:'flex',gap:'2px'}}>
-              {[1,2,3,4,5].map(i => <span key={i} style={{color:'#FFD700',fontSize:'18px'}}>★</span>)}
-            </div>
-            <span style={{fontSize:'12px',color:'var(--light-beige)',letterSpacing:'0.04em',fontWeight:500}}>5.0 by 78+</span>
-          </div>
+          <ReviewFeed />
 
           {/* WELCOME */}
           <div style={{background:'var(--black)',padding:'24px 20px 8px'}}>
