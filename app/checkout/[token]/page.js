@@ -94,8 +94,9 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer)
   }, [screen])
 
+  const getProductPriceCents = () => ((signup?.order_count || 0) + 1) >= 4 ? 6500 : 4500
   const getSuppliesAmount = () => supplies === 'single' ? 175 : supplies === 'monthly' ? 700 : 0
-  const getTotalCents = () => 4500 + getSuppliesAmount() + 890
+  const getTotalCents = () => getProductPriceCents() + getSuppliesAmount() + 890
   const getTotal = () => (getTotalCents() / 100).toFixed(2)
 
   const handlePay = async () => {
@@ -278,7 +279,7 @@ export default function CheckoutPage() {
                 <span style={{fontSize:'13px',color:'#D8C3B3',fontWeight:600}}>
                   {selectedProduct || signup?.booster}™{selectedDose ? ` — ${selectedDose}mg` : ''}
                 </span>
-                <span style={{fontSize:'13px',color:'#D8C3B3'}}>$45.00</span>
+                <span style={{fontSize:'13px',color:'#D8C3B3'}}>${(getProductPriceCents()/100).toFixed(2)}</span>
               </div>
               {supplies==='single'  && <div style={{display:'flex',justifyContent:'space-between',marginBottom:'4px'}}><span style={{fontSize:'12px',opacity:0.6,color:'#E8DDD2'}}>Single Supplies</span><span style={{fontSize:'12px',color:'#E8DDD2'}}>$1.75</span></div>}
               {supplies==='monthly' && <div style={{display:'flex',justifyContent:'space-between',marginBottom:'4px'}}><span style={{fontSize:'12px',opacity:0.6,color:'#E8DDD2'}}>Monthly Supplies</span><span style={{fontSize:'12px',color:'#E8DDD2'}}>$7.00</span></div>}
