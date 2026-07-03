@@ -21,7 +21,6 @@ export default function DosageScreen({ signup, onNext, onBack }) {
   const nextDose = getNextDose(currentDose)
   const otherProduct = getOtherProduct(currentProduct)
 
-  // First order: no history yet — starts everyone at 2.5mg, no choice needed
   if (orderCount === 0) {
     return (
       <div style={cardStyle}>
