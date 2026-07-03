@@ -272,12 +272,18 @@ export default function FunnelPage() {
                 {num:'04', title:'Your First Order & Why It Works', desc:"See what's in your first order, how the booster works, and the protocol to follow while you wait on test results.", pdf:'/pdfs/protocol_guide.pdf', dl:'Your_First_Order_And_Why_It_Works.pdf'},
               ].map(v => (
                 <div key={v.num} style={{background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'12px',padding:'16px'}}>
-                  <div style={{width:'100%',aspectRatio:'16/9',borderRadius:'8px',background:'linear-gradient(160deg,#1a1715 0%,#0d0b09 100%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',marginBottom:'14px',border:'1px solid var(--border)'}}>
-                    <div style={{width:'40px',height:'40px',borderRadius:'50%',border:'2px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0.7}}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--gold)"><path d="M8 5v14l11-7z"/></svg>
+                  {v.video ? (
+                    <video controls style={{width:'100%',aspectRatio:'16/9',borderRadius:'8px',marginBottom:'14px',background:'#000'}}>
+                      <source src={v.video} type="video/mp4" />
+                    </video>
+                  ) : (
+                    <div style={{width:'100%',aspectRatio:'16/9',borderRadius:'8px',background:'linear-gradient(160deg,#1a1715 0%,#0d0b09 100%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',marginBottom:'14px',border:'1px solid var(--border)'}}>
+                      <div style={{width:'40px',height:'40px',borderRadius:'50%',border:'2px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0.7}}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--gold)"><path d="M8 5v14l11-7z"/></svg>
+                      </div>
+                      <span style={{fontSize:'10px',letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--text-muted)'}}>Video Coming Soon</span>
                     </div>
-                    <span style={{fontSize:'10px',letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--text-muted)'}}>Video Coming Soon</span>
-                  </div>
+                  )}
                   <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'10px',letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--gold)',marginBottom:'4px'}}>Video {v.num}</p>
                   <h3 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'17px',fontWeight:600,color:'var(--white)',marginBottom:'8px',lineHeight:1.2}}>{v.title}</h3>
                   <p style={{fontSize:'12px',color:'var(--light-beige)',opacity:0.75,lineHeight:1.65,marginBottom:'14px'}}>{v.desc}</p>
