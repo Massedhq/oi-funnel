@@ -6,4 +6,4 @@ export async function GET() {
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 })
   }
-}code app/api/checkout/[token]/pay/route.js
+}
