@@ -141,13 +141,13 @@ export default function AdminShipPage() {
     }
   }
 
-  const page = { minHeight: '100vh', background: '#050505', color: '#FFFFFF', fontFamily: "'DM Sans', sans-serif", padding: '24px', display: 'flex', justifyContent: 'center' }
-  const card = { width: '100%', maxWidth: '420px' }
+  const page = { minHeight: '100vh', background: '#050505', color: '#FFFFFF', fontFamily: "'DM Sans', sans-serif", padding: '24px', display: 'flex', justifyContent: 'center', boxSizing: 'border-box' }
+  const card = { width: '100%', maxWidth: '420px', boxSizing: 'border-box' }
   const label = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#C9971C', marginBottom: '8px', display: 'block' }
-  const input = { width: '100%', background: '#161412', border: '1px solid rgba(200,168,138,0.3)', borderRadius: '8px', padding: '14px', fontSize: '14px', color: '#fff', marginBottom: '14px' }
-  const primaryBtn = { width: '100%', background: '#C9971C', color: '#000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '15px', borderRadius: '8px', border: 'none', cursor: 'pointer' }
-  const secondaryBtn = { width: '100%', background: 'transparent', color: '#C9971C', fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '12px', borderRadius: '8px', border: '1px solid #C9971C', cursor: 'pointer', marginTop: '10px' }
-  const cardBox = { background: '#161412', border: '1px solid rgba(200,168,138,0.3)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }
+  const input = { width: '100%', background: '#161412', border: '1px solid rgba(200,168,138,0.3)', borderRadius: '8px', padding: '14px', fontSize: '14px', color: '#fff', marginBottom: '14px', boxSizing: 'border-box' }
+  const primaryBtn = { width: '100%', background: '#C9971C', color: '#000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '15px', borderRadius: '8px', border: 'none', cursor: 'pointer', boxSizing: 'border-box' }
+  const secondaryBtn = { width: '100%', background: 'transparent', color: '#C9971C', fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '12px', borderRadius: '8px', border: '1px solid #C9971C', cursor: 'pointer', marginTop: '10px', boxSizing: 'border-box' }
+  const cardBox = { background: '#161412', border: '1px solid rgba(200,168,138,0.3)', borderRadius: '12px', padding: '20px', marginBottom: '16px', boxSizing: 'border-box' }
 
   if (!authed) {
     return (
@@ -189,7 +189,12 @@ export default function AdminShipPage() {
               id="label-photo-camera"
             />
             <label htmlFor="label-photo-camera" style={{ ...primaryBtn, display: 'block', textAlign: 'center', cursor: 'pointer' }}>
-              {extracting ? 'Reading Label…' : '📷 Take Photo of Label'}
+              {extracting ? 'Reading Label…' : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  Take Photo of Label
+                </span>
+              )}
             </label>
 
             <input
@@ -201,7 +206,12 @@ export default function AdminShipPage() {
               id="label-photo-upload"
             />
             <label htmlFor="label-photo-upload" style={{ ...secondaryBtn, display: 'block', textAlign: 'center', cursor: 'pointer' }}>
-              {extracting ? 'Reading Label…' : '🖼️ Upload From Photos'}
+              {extracting ? 'Reading Label…' : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  Upload From Photos
+                </span>
+              )}
             </label>
 
             {extractError && <p style={{ color: '#E89BB5', fontSize: '12px', marginTop: '12px' }}>{extractError}</p>}
