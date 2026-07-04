@@ -341,18 +341,18 @@ export default function FunnelPage() {
             <p style={sectionSubStyle}>Watch each video, then download the matching guide. By the end, your body will be telling you yes.</p>
             <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
               {[
-                {num:'01', title:'Know Your Blood Type', desc:'Your blood type determines how your body processes food, stores fat, and responds to supplements. This is where your reset starts.', pdf:'/pdfs/blood_type_guide.pdf', dl:'Know_Your_Blood_Type_Reset_Guide.pdf', video:'/videos/blood_type.mp4'},
-                {num:'02', title:'Deficiencies & What Tests You Need', desc:"Most women are deficient and don't know it. We break down which tests to request and what your results mean for your transformation.", pdf:'/pdfs/testing_guide.pdf', dl:'Deficiencies_And_Tests_Guide.pdf'},
-                {num:'03', title:'Body Functions + Peptides & Herbs', desc:'Understand how your metabolism, liver, and gut work together — plus peptides and herbs that can amplify your results.', pdf:'/pdfs/body_functions_guide.pdf', dl:'Body_Functions_Guide.pdf'},
-                {num:'04', title:'Your First Order & Why It Works', desc:"See what's in your first order, how the booster works, and the protocol to follow while you wait on test results.", pdf:'/pdfs/protocol_guide.pdf', dl:'Your_First_Order_And_Why_It_Works.pdf'},
+                {num:'01', title:'Know Your Blood Type', desc:'Your blood type determines how your body processes food, stores fat, and responds to supplements. This is where your reset starts.', pdf:'/pdfs/blood_type_guide.pdf', dl:'Know_Your_Blood_Type_Reset_Guide.pdf', video:'/videos/blood_type.mp4', cover:'/videos/covers/blood_type_cover.jpg'},
+                {num:'02', title:'Deficiencies & What Tests You Need', desc:"Most women are deficient and don't know it. We break down which tests to request and what your results mean for your transformation.", pdf:'/pdfs/testing_guide.pdf', dl:'Deficiencies_And_Tests_Guide.pdf', video:'/videos/testing.mp4', cover:'/videos/covers/testing_cover.jpg'},
+                {num:'03', title:'Body Functions + Peptides & Herbs', desc:'Understand how your metabolism, liver, and gut work together — plus peptides and herbs that can amplify your results.', pdf:'/pdfs/body_functions_guide.pdf', dl:'Body_Functions_Guide.pdf', video:'/videos/body_functions.mp4', cover:'/videos/covers/body_functions_cover.jpg'},
+                {num:'04', title:'Your First Order & Why It Works', desc:"See what's in your first order, how the booster works, and the protocol to follow while you wait on test results.", pdf:'/pdfs/protocol_guide.pdf', dl:'Your_First_Order_And_Why_It_Works.pdf', video:'/videos/first_order.mp4', cover:'/videos/covers/first_order_cover.jpg'},
               ].map(v => (
                 <div key={v.num} style={{background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'12px',padding:'16px'}}>
                   {v.video ? (
-                    <video controls style={{width:'100%',aspectRatio:'16/9',borderRadius:'8px',marginBottom:'14px',background:'#000'}}>
+                    <video controls poster={v.cover} style={{width:'100%',aspectRatio:'16/9',borderRadius:'8px',marginBottom:'14px',background:'#000'}}>
                       <source src={v.video} type="video/mp4" />
                     </video>
                   ) : (
-                    <div style={{width:'100%',aspectRatio:'16/9',borderRadius:'8px',background:'linear-gradient(160deg,#1a1715 0%,#0d0b09 100%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',marginBottom:'14px',border:'1px solid var(--border)'}}>
+                    <div style={{width:'100%',aspectRatio:'16/9',borderRadius:'8px',backgroundImage:v.cover?`linear-gradient(rgba(5,5,5,0.55),rgba(5,5,5,0.55)), url(${v.cover})`:'linear-gradient(160deg,#1a1715 0%,#0d0b09 100%)',backgroundSize:'cover',backgroundPosition:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',marginBottom:'14px',border:'1px solid var(--border)'}}>
                       <div style={{width:'40px',height:'40px',borderRadius:'50%',border:'2px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0.7}}>
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--gold)"><path d="M8 5v14l11-7z"/></svg>
                       </div>
