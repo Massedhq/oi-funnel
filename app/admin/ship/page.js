@@ -135,7 +135,7 @@ export default function AdminShipPage() {
       }
       setSentMessage(data.message || 'Tracking email sent!')
     } catch (err) {
-      setSendError('Something went wrong sending the email.')
+      setSendError(`Something went wrong: ${err.message || err}`)
     } finally {
       setSending(false)
     }
