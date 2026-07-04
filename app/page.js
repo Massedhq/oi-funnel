@@ -27,6 +27,7 @@ export default function FunnelPage() {
   const [findLinkEmail, setFindLinkEmail] = useState('')
   const [findLinkLoading, setFindLinkLoading] = useState(false)
   const [findLinkMessage, setFindLinkMessage] = useState('')
+  const [findLinkSent, setFindLinkSent] = useState(false)
 
   useEffect(() => {
     fetch('/api/spots')
@@ -59,11 +60,19 @@ export default function FunnelPage() {
       })
       const data = await res.json()
       setFindLinkMessage(data.message || "If that email is on file, we've sent your link.")
+      setFindLinkEmail('')
+      setFindLinkSent(true)
     } catch (err) {
       setFindLinkMessage('Something went wrong. Please try again in a moment.')
     } finally {
       setFindLinkLoading(false)
     }
+  }
+
+  const handleFindLinkReset = () => {
+    setFindLinkSent(false)
+    setFindLinkMessage('')
+    setFindLinkEmail('')
   }
 
   const handleCheckout = async () => {
@@ -479,25 +488,45 @@ export default function FunnelPage() {
             </div>
             <div style={{borderTop:'1px solid var(--border)',paddingTop:'20px',marginBottom:'20px'}}>
               <h4 style={{fontSize:'10px',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--gold)',marginBottom:'10px'}}>Already A Member?</h4>
-              <p style={{fontSize:'11px',opacity:0.6,lineHeight:1.6,marginBottom:'12px'}}>Lost your private order link? Enter your email and we'll send it to you.</p>
-              <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
-                <input
-                  type="email"
-                  value={findLinkEmail}
-                  onChange={e => setFindLinkEmail(e.target.value)}
-                  placeholder="you@email.com"
-                  style={{flex:'1 1 160px',background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'6px',padding:'11px 12px',fontSize:'12px',color:'var(--white)'}}
-                />
-                <button
-                  onClick={handleFindLink}
-                  disabled={findLinkLoading}
-                  style={{background:'var(--gold)',color:'var(--black)',fontSize:'11px',fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',padding:'11px 18px',borderRadius:'6px',border:'none',cursor: findLinkLoading ? 'not-allowed' : 'pointer',opacity: findLinkLoading ? 0.6 : 1}}
-                >
-                  {findLinkLoading ? 'Sending…' : 'Find My Link'}
-                </button>
-              </div>
-              {findLinkMessage && (
-                <p style={{fontSize:'11px',color:'var(--gold-light)',marginTop:'10px',lineHeight:1.5}}>{findLinkMessage}</p>
+
+              {!findLinkSent ? (
+                <>
+                  <p style={{fontSize:'11px',opacity:0.6,lineHeight:1.6,marginBottom:'12px'}}>Lost your private order link? Enter your email and we'll send it to you.</p>
+                  <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+                    <input
+                      type="email"
+                      value={findLinkEmail}
+                      onChange={e => setFindLinkEmail(e.target.value)}
+                      placeholder="you@email.com"
+                      style={{flex:'1 1 160px',background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'6px',padding:'11px 12px',fontSize:'12px',color:'var(--white)'}}
+                    />
+                    <button
+                      onClick={handleFindLink}
+                      disabled={findLinkLoading}
+                      style={{background:'var(--gold)',color:'var(--black)',fontSize:'11px',fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',padding:'11px 18px',borderRadius:'6px',border:'none',cursor: findLinkLoading ? 'not-allowed' : 'pointer',opacity: findLinkLoading ? 0.6 : 1}}
+                    >
+                      {findLinkLoading ? 'Sending…' : 'Find My Link'}
+                    </button>
+                  </div>
+                  {findLinkMessage && (
+                    <p style={{fontSize:'11px',color:'#E89BB5',marginTop:'10px',lineHeight:1.5}}>{findLinkMessage}</p>
+                  )}
+                </>
+              ) : (
+                <div style={{background:'rgba(200,168,138,0.12)',border:'1px solid var(--border)',borderRadius:'8px',padding:'16px'}}>
+                  <div style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'12px'}}>
+                    <span style={{width:'20px',height:'20px',borderRadius:'50%',border:'1.5px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:'1px'}}>
+                      <svg viewBox="0 0 12 12" width="9" height="9" stroke="var(--gold)" fill="none" strokeWidth="2"><polyline points="2,6 5,9 10,3"/></svg>
+                    </span>
+                    <p style={{fontSize:'12px',color:'var(--gold-light)',lineHeight:1.6,margin:0}}>{findLinkMessage}</p>
+                  </div>
+                  <button
+                    onClick={handleFindLinkReset}
+                    style={{background:'transparent',color:'var(--gold)',fontSize:'11px',fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',padding:'9px 16px',borderRadius:'6px',border:'1px solid var(--gold)',cursor:'pointer'}}
+                  >
+                    Send To Another Email
+                  </button>
+                </div>
               )}
             </div>
 
