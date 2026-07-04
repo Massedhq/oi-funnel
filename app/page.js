@@ -314,7 +314,7 @@ export default function FunnelPage() {
               ))}
             </ul>
             <div style={{border:'1px solid var(--border)',borderRadius:'8px',padding:'14px 18px',display:'inline-flex',flexDirection:'column',alignItems:'flex-start',marginBottom:'14px'}}>
-              <span style={{fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--light-beige)',opacity:0.6}}>Only</span>
+              <span style={{fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--light-beige)',opacity:0.6}}>Starting at</span>
               <span style={{fontFamily:"'Cormorant Garamond', serif",fontSize:'44px',fontWeight:600,color:'var(--gold-light)',lineHeight:1}}>$45</span>
               <span style={{fontSize:'10px',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--light-beige)',opacity:0.6,marginTop:'2px'}}>A Month</span>
             </div>
