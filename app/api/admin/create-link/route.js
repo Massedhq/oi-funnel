@@ -39,32 +39,70 @@ export async function POST(request) {
     const normalizedEmail = email.trim().toLowerCase()
 
     const existing = await sql`
-      SELECT email FROM signups WHERE LOWER(email) = ${normalizedEmail} LIMIT 1
+      SELECT * FROM signups WHERE LOWER(email) = ${normalizedEmail} LIMIT 1
     `
+
+    let token
+    let isUpdate = false
+
     if (existing.length) {
-      return NextResponse.json(
-        { error: 'A customer with this email already exists. Use "Resend Order Link" instead.' },
-        { status: 409 }
-      )
+      const record = existing[0]
+      isUpdate = true
+
+      if (record.order_count > 0 && record.private_token) {
+        return NextResponse.json(
+          { error: 'This customer already has a completed order and an active link. Use "Resend Order Link" instead.' },
+          { status: 409 }
+        )
+      }
+
+      // Existing but incomplete (e.g. filled out the signup form but never
+      // finished checkout/payment). Activate it: fill in real info, mark
+      // their manual order as complete, and generate a working link.
+      token = record.private_token || record.token || crypto.randomUUID().replace(/-/g, '')
+
+      await sql`
+        UPDATE signups SET
+          name = ${name},
+          phone = ${phone || record.phone || ''},
+          booster = ${booster || record.booster || ''},
+          ship_address = ${shipAddress},
+          ship_address2 = ${shipAddress2 || ''},
+          ship_city = ${shipCity},
+          ship_state = ${shipState},
+          ship_zip = ${shipZip},
+          bill_address = ${shipAddress},
+          bill_city = ${shipCity},
+          bill_state = ${shipState},
+          bill_zip = ${shipZip},
+          token = ${record.token || token},
+          private_token = ${token},
+          order_count = 1,
+          last_order_date = NOW(),
+          paid = true,
+          checked_out = true,
+          review_required = true
+        WHERE LOWER(email) = ${normalizedEmail}
+      `
+    } else {
+      token = crypto.randomUUID().replace(/-/g, '')
+
+      await sql`
+        INSERT INTO signups (
+          name, phone, email, booster, current_dosage,
+          ship_address, ship_address2, ship_city, ship_state, ship_zip,
+          bill_address, bill_city, bill_state, bill_zip,
+          token, private_token, order_count, last_order_date,
+          paid, checked_out, review_required, review_submitted
+        ) VALUES (
+          ${name}, ${phone || ''}, ${normalizedEmail}, ${booster || ''}, 2.5,
+          ${shipAddress}, ${shipAddress2 || ''}, ${shipCity}, ${shipState}, ${shipZip},
+          ${shipAddress}, ${shipCity}, ${shipState}, ${shipZip},
+          ${token}, ${token}, 1, NOW(),
+          true, true, true, false
+        )
+      `
     }
-
-    const token = crypto.randomUUID().replace(/-/g, '')
-
-    await sql`
-      INSERT INTO signups (
-        name, phone, email, booster, current_dosage,
-        ship_address, ship_address2, ship_city, ship_state, ship_zip,
-        bill_address, bill_city, bill_state, bill_zip,
-        token, private_token, order_count, last_order_date,
-        paid, checked_out, review_required, review_submitted
-      ) VALUES (
-        ${name}, ${phone || ''}, ${normalizedEmail}, ${booster || ''}, 2.5,
-        ${shipAddress}, ${shipAddress2 || ''}, ${shipCity}, ${shipState}, ${shipZip},
-        ${shipAddress}, ${shipCity}, ${shipState}, ${shipZip},
-        ${token}, ${token}, 1, NOW(),
-        true, true, true, false
-      )
-    `
 
     const link = `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/${token}`
 
@@ -103,7 +141,9 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       link,
-      message: sendEmail ? `Customer created and link emailed to ${normalizedEmail}.` : 'Customer created. Copy the link below to share manually.',
+      message: sendEmail
+        ? `${isUpdate ? 'Existing record activated' : 'Customer created'} and link emailed to ${normalizedEmail}.`
+        : `${isUpdate ? 'Existing record activated.' : 'Customer created.'} Copy the link below to share manually.`,
     })
   } catch (err) {
     console.error('Create-link error:', err)

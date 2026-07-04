@@ -377,7 +377,7 @@ export default function AdminShipPage() {
         <div style={{ borderTop: '1px solid rgba(200,168,138,0.3)', paddingTop: '24px', marginTop: '32px' }}>
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', marginBottom: '6px' }}>Create Manual Order Link</h2>
           <p style={{ fontSize: '12px', opacity: 0.6, marginBottom: '16px' }}>
-            For a customer who paid you directly (outside the funnel) and has no record yet. This creates their account, counts their manual payment as Order #1, and generates their link for Order #2 onward.
+            For a customer who paid you directly (outside the funnel) — whether they have no record at all, or only a partial signup with no completed order. This activates their account, counts their manual payment as Order #1, and generates their link for Order #2 onward.
           </p>
 
           <p style={label}>Full Name</p>
