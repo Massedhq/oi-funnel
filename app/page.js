@@ -633,6 +633,8 @@ export default function FunnelPage() {
 
             <div style={{borderTop:'1px solid var(--border)',paddingTop:'16px',fontSize:'9px',opacity:0.4,textAlign:'center',letterSpacing:'0.05em'}}>
               © 2026 Oi Body Chemistry · Orisha Infinity · All Rights Reserved<br/>Lebanon Rd, Frisco, TX 75034
+              <br/><br/>
+              This website, including its content, source code, design, and underlying ordering system, is the proprietary property of Orisha Infinity. Unauthorized copying, reproduction, or use of any part of this system is strictly prohibited.
             </div>
           </div>
         </div>
