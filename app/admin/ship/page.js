@@ -20,6 +20,7 @@ export default function AdminShipPage() {
   const [sendError, setSendError] = useState('')
 
   const fileInputRef = useRef(null)
+  const galleryInputRef = useRef(null)
 
   const handleLogin = async () => {
     setAuthLoading(true)
@@ -62,6 +63,7 @@ export default function AdminShipPage() {
     setSentMessage('')
     setSendError('')
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
 
   const handlePhotoSelected = async (e) => {
@@ -184,11 +186,24 @@ export default function AdminShipPage() {
               capture="environment"
               onChange={handlePhotoSelected}
               style={{ display: 'none' }}
-              id="label-photo-input"
+              id="label-photo-camera"
             />
-            <label htmlFor="label-photo-input" style={{ ...primaryBtn, display: 'block', textAlign: 'center', cursor: 'pointer' }}>
+            <label htmlFor="label-photo-camera" style={{ ...primaryBtn, display: 'block', textAlign: 'center', cursor: 'pointer' }}>
               {extracting ? 'Reading Label…' : '📷 Take Photo of Label'}
             </label>
+
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoSelected}
+              style={{ display: 'none' }}
+              id="label-photo-upload"
+            />
+            <label htmlFor="label-photo-upload" style={{ ...secondaryBtn, display: 'block', textAlign: 'center', cursor: 'pointer' }}>
+              {extracting ? 'Reading Label…' : '🖼️ Upload From Photos'}
+            </label>
+
             {extractError && <p style={{ color: '#E89BB5', fontSize: '12px', marginTop: '12px' }}>{extractError}</p>}
           </>
         )}
