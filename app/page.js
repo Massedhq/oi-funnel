@@ -29,6 +29,13 @@ export default function FunnelPage() {
   const [findLinkMessage, setFindLinkMessage] = useState('')
   const [findLinkSent, setFindLinkSent] = useState(false)
 
+  const [trackFirstName, setTrackFirstName] = useState('')
+  const [trackLastName, setTrackLastName] = useState('')
+  const [trackEmail, setTrackEmail] = useState('')
+  const [trackLoading, setTrackLoading] = useState(false)
+  const [trackMessage, setTrackMessage] = useState('')
+  const [trackSent, setTrackSent] = useState(false)
+
   useEffect(() => {
     fetch('/api/spots')
       .then(r => r.json())
@@ -73,6 +80,40 @@ export default function FunnelPage() {
     setFindLinkSent(false)
     setFindLinkMessage('')
     setFindLinkEmail('')
+  }
+
+  const handleTrackRequest = async () => {
+    if (!trackFirstName || !trackLastName || !trackEmail || !trackEmail.includes('@')) {
+      setTrackMessage('Please enter your first name, last name, and a valid email.')
+      return
+    }
+    setTrackLoading(true)
+    setTrackMessage('')
+    try {
+      const res = await fetch('/api/find-tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: trackFirstName, lastName: trackLastName, email: trackEmail }),
+      })
+      const data = await res.json()
+      setTrackMessage(data.message || "If we found a matching order, we've sent your tracking info.")
+      setTrackFirstName('')
+      setTrackLastName('')
+      setTrackEmail('')
+      setTrackSent(true)
+    } catch (err) {
+      setTrackMessage('Something went wrong. Please try again in a moment.')
+    } finally {
+      setTrackLoading(false)
+    }
+  }
+
+  const handleTrackReset = () => {
+    setTrackSent(false)
+    setTrackMessage('')
+    setTrackFirstName('')
+    setTrackLastName('')
+    setTrackEmail('')
   }
 
   const handleCheckout = async () => {
@@ -525,6 +566,66 @@ export default function FunnelPage() {
                     style={{background:'transparent',color:'var(--gold)',fontSize:'11px',fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',padding:'9px 16px',borderRadius:'6px',border:'1px solid var(--gold)',cursor:'pointer'}}
                   >
                     Send To Another Email
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div style={{borderTop:'1px solid var(--border)',paddingTop:'20px',marginBottom:'20px'}}>
+              <h4 style={{fontSize:'10px',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--gold)',marginBottom:'10px'}}>Waiting On A Package?</h4>
+
+              {!trackSent ? (
+                <>
+                  <p style={{fontSize:'11px',opacity:0.6,lineHeight:1.6,marginBottom:'12px'}}>To protect your privacy, enter your first and last name (as used on your order) and your email, and we'll send your tracking update if it's available.</p>
+                  <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                    <div style={{display:'flex',gap:'8px'}}>
+                      <input
+                        type="text"
+                        value={trackFirstName}
+                        onChange={e => setTrackFirstName(e.target.value)}
+                        placeholder="First name"
+                        style={{flex:1,background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'6px',padding:'11px 12px',fontSize:'12px',color:'var(--white)'}}
+                      />
+                      <input
+                        type="text"
+                        value={trackLastName}
+                        onChange={e => setTrackLastName(e.target.value)}
+                        placeholder="Last name"
+                        style={{flex:1,background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'6px',padding:'11px 12px',fontSize:'12px',color:'var(--white)'}}
+                      />
+                    </div>
+                    <input
+                      type="email"
+                      value={trackEmail}
+                      onChange={e => setTrackEmail(e.target.value)}
+                      placeholder="you@email.com"
+                      style={{background:'var(--warm)',border:'1px solid var(--border)',borderRadius:'6px',padding:'11px 12px',fontSize:'12px',color:'var(--white)'}}
+                    />
+                    <button
+                      onClick={handleTrackRequest}
+                      disabled={trackLoading}
+                      style={{background:'var(--gold)',color:'var(--black)',fontSize:'11px',fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',padding:'12px',borderRadius:'6px',border:'none',cursor: trackLoading ? 'not-allowed' : 'pointer',opacity: trackLoading ? 0.6 : 1}}
+                    >
+                      {trackLoading ? 'Sending…' : 'Get My Tracking Update'}
+                    </button>
+                  </div>
+                  {trackMessage && (
+                    <p style={{fontSize:'11px',color:'#E89BB5',marginTop:'10px',lineHeight:1.5}}>{trackMessage}</p>
+                  )}
+                </>
+              ) : (
+                <div style={{background:'rgba(200,168,138,0.12)',border:'1px solid var(--border)',borderRadius:'8px',padding:'16px'}}>
+                  <div style={{display:'flex',alignItems:'flex-start',gap:'10px',marginBottom:'12px'}}>
+                    <span style={{width:'20px',height:'20px',borderRadius:'50%',border:'1.5px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:'1px'}}>
+                      <svg viewBox="0 0 12 12" width="9" height="9" stroke="var(--gold)" fill="none" strokeWidth="2"><polyline points="2,6 5,9 10,3"/></svg>
+                    </span>
+                    <p style={{fontSize:'12px',color:'var(--gold-light)',lineHeight:1.6,margin:0}}>{trackMessage}</p>
+                  </div>
+                  <button
+                    onClick={handleTrackReset}
+                    style={{background:'transparent',color:'var(--gold)',fontSize:'11px',fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',padding:'9px 16px',borderRadius:'6px',border:'1px solid var(--gold)',cursor:'pointer'}}
+                  >
+                    Submit Another Request
                   </button>
                 </div>
               )}

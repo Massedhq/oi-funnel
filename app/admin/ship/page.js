@@ -1,0 +1,252 @@
+'use client'
+
+import { useState, useRef } from 'react'
+
+export default function AdminShipPage() {
+  const [secret, setSecret] = useState('')
+  const [authed, setAuthed] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState('')
+  const [extracted, setExtracted] = useState(null) // { trackingNumber, recipientName, city, state, zip }
+  const [candidates, setCandidates] = useState([])
+  const [selectedEmail, setSelectedEmail] = useState('')
+  const [trackingNumber, setTrackingNumber] = useState('')
+
+  const [sending, setSending] = useState(false)
+  const [sentMessage, setSentMessage] = useState('')
+  const [sendError, setSendError] = useState('')
+
+  const fileInputRef = useRef(null)
+
+  const handleLogin = async () => {
+    setAuthLoading(true)
+    setAuthError('')
+    try {
+      const res = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        sessionStorage.setItem('oi_admin_secret', secret)
+        setAuthed(true)
+      } else {
+        setAuthError(data.error || 'Incorrect password.')
+      }
+    } catch (err) {
+      setAuthError('Something went wrong. Try again.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  // Auto-login if we already have the secret saved for this browser session
+  useState(() => {
+    const saved = typeof window !== 'undefined' ? sessionStorage.getItem('oi_admin_secret') : null
+    if (saved) {
+      setSecret(saved)
+      setAuthed(true)
+    }
+  })
+
+  const resetScan = () => {
+    setExtracted(null)
+    setCandidates([])
+    setSelectedEmail('')
+    setTrackingNumber('')
+    setExtractError('')
+    setSentMessage('')
+    setSendError('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handlePhotoSelected = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    resetScan()
+    setExtracting(true)
+
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      const res = await fetch('/api/admin/extract-label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret,
+          imageBase64: base64,
+          mediaType: file.type || 'image/jpeg',
+        }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setExtractError(data.error || 'Could not read that label.')
+        return
+      }
+
+      setExtracted(data.extracted)
+      setTrackingNumber(data.extracted?.trackingNumber || '')
+      setCandidates(data.candidates || [])
+      if (data.candidates?.length === 1) {
+        setSelectedEmail(data.candidates[0].email)
+      }
+    } catch (err) {
+      setExtractError('Something went wrong reading the photo. Try again.')
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  const handleConfirmSend = async () => {
+    if (!selectedEmail || !trackingNumber) {
+      setSendError('Select a customer and confirm the tracking number first.')
+      return
+    }
+    setSending(true)
+    setSendError('')
+    try {
+      const res = await fetch('/api/admin/ship-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret,
+          email: selectedEmail,
+          carrier: 'USPS',
+          trackingNumber,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSendError(data.error || 'Failed to send.')
+        return
+      }
+      setSentMessage(data.message || 'Tracking email sent!')
+    } catch (err) {
+      setSendError('Something went wrong sending the email.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const page = { minHeight: '100vh', background: '#050505', color: '#FFFFFF', fontFamily: "'DM Sans', sans-serif", padding: '24px', display: 'flex', justifyContent: 'center' }
+  const card = { width: '100%', maxWidth: '420px' }
+  const label = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#C9971C', marginBottom: '8px', display: 'block' }
+  const input = { width: '100%', background: '#161412', border: '1px solid rgba(200,168,138,0.3)', borderRadius: '8px', padding: '14px', fontSize: '14px', color: '#fff', marginBottom: '14px' }
+  const primaryBtn = { width: '100%', background: '#C9971C', color: '#000', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '15px', borderRadius: '8px', border: 'none', cursor: 'pointer' }
+  const secondaryBtn = { width: '100%', background: 'transparent', color: '#C9971C', fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '12px', borderRadius: '8px', border: '1px solid #C9971C', cursor: 'pointer', marginTop: '10px' }
+  const cardBox = { background: '#161412', border: '1px solid rgba(200,168,138,0.3)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }
+
+  if (!authed) {
+    return (
+      <div style={page}>
+        <div style={card}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', marginBottom: '20px' }}>Admin Login</h1>
+          <label style={label}>Admin Password</label>
+          <input
+            type="password"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            style={input}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+          />
+          {authError && <p style={{ color: '#E89BB5', fontSize: '12px', marginBottom: '12px' }}>{authError}</p>}
+          <button onClick={handleLogin} disabled={authLoading} style={primaryBtn}>
+            {authLoading ? 'Checking…' : 'Log In'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={page}>
+      <div style={card}>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', marginBottom: '6px' }}>Ship an Order</h1>
+        <p style={{ fontSize: '12px', opacity: 0.6, marginBottom: '24px' }}>Take a photo of the USPS label to read the tracking number and match it to a customer.</p>
+
+        {!extracted && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelected}
+              style={{ display: 'none' }}
+              id="label-photo-input"
+            />
+            <label htmlFor="label-photo-input" style={{ ...primaryBtn, display: 'block', textAlign: 'center', cursor: 'pointer' }}>
+              {extracting ? 'Reading Label…' : '📷 Take Photo of Label'}
+            </label>
+            {extractError && <p style={{ color: '#E89BB5', fontSize: '12px', marginTop: '12px' }}>{extractError}</p>}
+          </>
+        )}
+
+        {extracted && !sentMessage && (
+          <div style={cardBox}>
+            <p style={label}>Tracking Number (edit if needed)</p>
+            <input
+              type="text"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              style={input}
+            />
+
+            <p style={label}>Matched Customer</p>
+            {candidates.length === 0 && (
+              <p style={{ fontSize: '13px', color: '#E89BB5', marginBottom: '14px' }}>
+                No match found for "{extracted.recipientName || 'unknown name'}". Double check the name/email in your records, or resend from the main admin route manually.
+              </p>
+            )}
+            {candidates.length > 0 && (
+              <div style={{ marginBottom: '14px' }}>
+                {candidates.map((c) => (
+                  <label key={c.email} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px', border: selectedEmail === c.email ? '1.5px solid #C9971C' : '1px solid rgba(200,168,138,0.3)', borderRadius: '8px', marginBottom: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="candidate"
+                      checked={selectedEmail === c.email}
+                      onChange={() => setSelectedEmail(c.email)}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div style={{ fontSize: '12px', lineHeight: 1.6 }}>
+                      <div style={{ fontWeight: 700 }}>{c.name}</div>
+                      <div style={{ opacity: 0.7 }}>{c.email}</div>
+                      <div style={{ opacity: 0.7 }}>{c.ship_address}{c.ship_address2 ? `, ${c.ship_address2}` : ''}, {c.ship_city}, {c.ship_state} {c.ship_zip}</div>
+                      <div style={{ opacity: 0.5 }}>Order #{c.order_count}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {sendError && <p style={{ color: '#E89BB5', fontSize: '12px', marginBottom: '10px' }}>{sendError}</p>}
+
+            <button onClick={handleConfirmSend} disabled={sending || !selectedEmail} style={{ ...primaryBtn, opacity: sending || !selectedEmail ? 0.5 : 1, cursor: sending || !selectedEmail ? 'not-allowed' : 'pointer' }}>
+              {sending ? 'Sending…' : 'Confirm & Send'}
+            </button>
+            <button onClick={resetScan} style={secondaryBtn}>Scan a Different Label</button>
+          </div>
+        )}
+
+        {sentMessage && (
+          <div style={cardBox}>
+            <p style={{ color: '#D8C3B3', fontSize: '14px', marginBottom: '16px' }}>✓ {sentMessage}</p>
+            <button onClick={resetScan} style={primaryBtn}>Ship Another Order</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
