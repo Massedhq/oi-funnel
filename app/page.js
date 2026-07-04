@@ -379,9 +379,9 @@ export default function FunnelPage() {
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'12px'}}>
               {[
-                {name:'Avy A.', program:'8 months', result:'-56 lbs', before:'/images/avy_before.png', after:'/images/avy_after.png'},
-                {name:'Monica B.', program:'16 weeks', result:'-29 lbs', before:'/images/monica_before.png', after:'/images/monica_after.png'},
-                {name:'Amanda L.', program:'14 months', result:'-85 lbs', before:'/images/amanda_before.png', after:'/images/amanda_after.png'},
+                {name:'Avy A.', program:'8 months', result:'-59 lbs', before:'/images/avy_before.png', after:'/images/avy_after.png'},
+                {name:'Monica B.', program:'16 weeks', result:'-70 lbs', before:'/images/monica_before.png', after:'/images/monica_after.png'},
+                {name:'Amanda L.', program:'14 months', result:'-185 lbs', before:'/images/amanda_before.png', after:'/images/amanda_after.png'},
                 {name:'Erica E.', program:'8 months', result:'-60 lbs', before:'/images/erica_before.png', after:'/images/erica_after.png'},
               ].map(p => (
                 <div key={p.name} style={{border:'1px solid var(--border)',borderRadius:'10px',padding:'10px',textAlign:'center'}}>
