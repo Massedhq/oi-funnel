@@ -76,7 +76,8 @@ If any field can't be read clearly, use an empty string for it. Return ONLY the 
 
     if (!aiRes.ok) {
       console.error('Anthropic API error:', aiData)
-      return NextResponse.json({ error: 'Failed to read the label image.' }, { status: 500 })
+      const detail = aiData?.error?.message || aiData?.error?.type || 'Unknown error contacting Anthropic API.'
+      return NextResponse.json({ error: `Failed to read the label image: ${detail}` }, { status: 500 })
     }
 
     const textBlock = aiData.content?.find((c) => c.type === 'text')?.text || ''
