@@ -19,6 +19,11 @@ export default function AdminShipPage() {
   const [sentMessage, setSentMessage] = useState('')
   const [sendError, setSendError] = useState('')
 
+  const [resendEmail, setResendEmail] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
+  const [resendError, setResendError] = useState('')
+
   const fileInputRef = useRef(null)
   const galleryInputRef = useRef(null)
 
@@ -138,6 +143,34 @@ export default function AdminShipPage() {
       setSendError(`Something went wrong: ${err.message || err}`)
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleResendLink = async () => {
+    if (!resendEmail || !resendEmail.includes('@')) {
+      setResendError('Enter a valid customer email.')
+      return
+    }
+    setResendLoading(true)
+    setResendError('')
+    setResendMessage('')
+    try {
+      const res = await fetch('/api/admin/resend-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, email: resendEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setResendError(data.error || 'Failed to resend link.')
+        return
+      }
+      setResendMessage(data.message || 'Link resent!')
+      setResendEmail('')
+    } catch (err) {
+      setResendError(`Something went wrong: ${err.message || err}`)
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -271,6 +304,30 @@ export default function AdminShipPage() {
             <button onClick={resetScan} style={primaryBtn}>Ship Another Order</button>
           </div>
         )}
+
+        <div style={{ borderTop: '1px solid rgba(200,168,138,0.3)', paddingTop: '24px', marginTop: '32px' }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', marginBottom: '6px' }}>Resend Order Link</h2>
+          <p style={{ fontSize: '12px', opacity: 0.6, marginBottom: '16px' }}>
+            Manually resend a customer's existing private order link (their current token — this won't generate a new one).
+          </p>
+          <input
+            type="email"
+            value={resendEmail}
+            onChange={(e) => setResendEmail(e.target.value)}
+            placeholder="customer@email.com"
+            style={input}
+            onKeyDown={(e) => e.key === 'Enter' && handleResendLink()}
+          />
+          {resendError && <p style={{ color: '#E89BB5', fontSize: '12px', marginBottom: '10px' }}>{resendError}</p>}
+          {resendMessage && <p style={{ color: '#D8C3B3', fontSize: '12px', marginBottom: '10px' }}>✓ {resendMessage}</p>}
+          <button
+            onClick={handleResendLink}
+            disabled={resendLoading}
+            style={{ ...primaryBtn, opacity: resendLoading ? 0.6 : 1, cursor: resendLoading ? 'not-allowed' : 'pointer' }}
+          >
+            {resendLoading ? 'Sending…' : 'Resend Link'}
+          </button>
+        </div>
       </div>
     </div>
   )
