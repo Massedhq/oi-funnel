@@ -24,6 +24,16 @@ export default function AdminShipPage() {
   const [resendMessage, setResendMessage] = useState('')
   const [resendError, setResendError] = useState('')
 
+  const [createForm, setCreateForm] = useState({
+    name: '', email: '', phone: '', booster: '',
+    shipAddress: '', shipAddress2: '', shipCity: '', shipState: '', shipZip: '',
+  })
+  const [createSendEmail, setCreateSendEmail] = useState(true)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createMessage, setCreateMessage] = useState('')
+  const [createError, setCreateError] = useState('')
+  const [createLink, setCreateLink] = useState('')
+
   const fileInputRef = useRef(null)
   const galleryInputRef = useRef(null)
 
@@ -171,6 +181,41 @@ export default function AdminShipPage() {
       setResendError(`Something went wrong: ${err.message || err}`)
     } finally {
       setResendLoading(false)
+    }
+  }
+
+  const updateCreateForm = (field) => (e) => {
+    setCreateForm((f) => ({ ...f, [field]: e.target.value }))
+  }
+
+  const handleCreateLink = async () => {
+    const { name, email, shipAddress, shipCity, shipState, shipZip } = createForm
+    if (!name || !email || !email.includes('@') || !shipAddress || !shipCity || !shipState || !shipZip) {
+      setCreateError('Name, email, and full shipping address are required.')
+      return
+    }
+    setCreateLoading(true)
+    setCreateError('')
+    setCreateMessage('')
+    setCreateLink('')
+    try {
+      const res = await fetch('/api/admin/create-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, ...createForm, sendEmail: createSendEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCreateError(data.error || 'Failed to create customer link.')
+        return
+      }
+      setCreateMessage(data.warning || data.message || 'Done!')
+      setCreateLink(data.link || '')
+      setCreateForm({ name: '', email: '', phone: '', booster: '', shipAddress: '', shipAddress2: '', shipCity: '', shipState: '', shipZip: '' })
+    } catch (err) {
+      setCreateError(`Something went wrong: ${err.message || err}`)
+    } finally {
+      setCreateLoading(false)
     }
   }
 
@@ -326,6 +371,55 @@ export default function AdminShipPage() {
             style={{ ...primaryBtn, opacity: resendLoading ? 0.6 : 1, cursor: resendLoading ? 'not-allowed' : 'pointer' }}
           >
             {resendLoading ? 'Sending…' : 'Resend Link'}
+          </button>
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(200,168,138,0.3)', paddingTop: '24px', marginTop: '32px' }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', marginBottom: '6px' }}>Create Manual Order Link</h2>
+          <p style={{ fontSize: '12px', opacity: 0.6, marginBottom: '16px' }}>
+            For a customer who paid you directly (outside the funnel) and has no record yet. This creates their account, counts their manual payment as Order #1, and generates their link for Order #2 onward.
+          </p>
+
+          <p style={label}>Full Name</p>
+          <input type="text" value={createForm.name} onChange={updateCreateForm('name')} style={input} placeholder="Jane Doe" />
+
+          <p style={label}>Email</p>
+          <input type="email" value={createForm.email} onChange={updateCreateForm('email')} style={input} placeholder="jane@email.com" />
+
+          <p style={label}>Phone (optional)</p>
+          <input type="text" value={createForm.phone} onChange={updateCreateForm('phone')} style={input} placeholder="2145551234" />
+
+          <p style={label}>Product</p>
+          <input type="text" value={createForm.booster} onChange={updateCreateForm('booster')} style={input} placeholder="MetaTride Ultra" />
+
+          <p style={label}>Shipping Address</p>
+          <input type="text" value={createForm.shipAddress} onChange={updateCreateForm('shipAddress')} style={input} placeholder="Street address" />
+          <input type="text" value={createForm.shipAddress2} onChange={updateCreateForm('shipAddress2')} style={input} placeholder="Apt / Unit (optional)" />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input type="text" value={createForm.shipCity} onChange={updateCreateForm('shipCity')} style={{ ...input, flex: 2 }} placeholder="City" />
+            <input type="text" value={createForm.shipState} onChange={updateCreateForm('shipState')} style={{ ...input, flex: 1 }} placeholder="TX" />
+            <input type="text" value={createForm.shipZip} onChange={updateCreateForm('shipZip')} style={{ ...input, flex: 1 }} placeholder="Zip" />
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '14px', cursor: 'pointer' }}>
+            <input type="checkbox" checked={createSendEmail} onChange={(e) => setCreateSendEmail(e.target.checked)} />
+            Email the link to the customer automatically
+          </label>
+
+          {createError && <p style={{ color: '#E89BB5', fontSize: '12px', marginBottom: '10px' }}>{createError}</p>}
+          {createMessage && <p style={{ color: '#D8C3B3', fontSize: '12px', marginBottom: '10px' }}>✓ {createMessage}</p>}
+          {createLink && (
+            <p style={{ fontSize: '11px', wordBreak: 'break-all', background: '#161412', border: '1px solid rgba(200,168,138,0.3)', borderRadius: '6px', padding: '10px', marginBottom: '14px' }}>
+              {createLink}
+            </p>
+          )}
+
+          <button
+            onClick={handleCreateLink}
+            disabled={createLoading}
+            style={{ ...primaryBtn, opacity: createLoading ? 0.6 : 1, cursor: createLoading ? 'not-allowed' : 'pointer' }}
+          >
+            {createLoading ? 'Creating…' : 'Create Customer & Link'}
           </button>
         </div>
       </div>
