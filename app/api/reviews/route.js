@@ -18,6 +18,6 @@ export async function GET() {
       reviews: rows,
     })
   } catch (err) {
-    return Response.json({ error: 'Server error' }, { status: 500 })
+    return Response.json({ error: err.message }, { status: 500 })
   }
 }
