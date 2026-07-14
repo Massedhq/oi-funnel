@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import ReviewGateScreen from '../../../components/funnel/ReviewGateScreen'
-import ExistingCustomerDosageScreen from '../../../components/funnel/ExistingCustomerDosageScreen'
-import SuppliesScreen from '../../../components/funnel/SuppliesScreen'
+import ReviewGateScreen from '../../components/funnel/ReviewGateScreen'
+import ExistingCustomerDosageScreen from '../../components/funnel/ExistingCustomerDosageScreen'
+import SuppliesScreen from '../../components/funnel/SuppliesScreen'
 
 export const dynamic = 'force-dynamic'
 
