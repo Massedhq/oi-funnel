@@ -23,7 +23,7 @@ export default function OrderLookupPage() {
       })
       const data = await res.json()
       if (res.ok && data.token) {
-        router.push(`/checkout/${data.token}`)
+        router.push(`/order-checkout/${data.token}`)
       } else {
         setError(data.error || "We couldn't find an order under that email. Please check and try again.")
       }
