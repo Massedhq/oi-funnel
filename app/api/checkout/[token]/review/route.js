@@ -1,52 +1,41 @@
-// app/api/admin/reviews/route.js
-//
-// GET  -> list all reviews (newest first)
-// DELETE -> delete a review by id
+import { sql } from '@/lib/db'
 
-import { NextResponse } from 'next/server'
-import { neon } from '@neondatabase/serverless'
+export const dynamic = 'force-dynamic'
 
-const sql = neon(process.env.DATABASE_URL)
-
-export async function GET(request) {
+export async function POST(req, { params }) {
   try {
-    const { searchParams } = new URL(request.url)
-    const secret = searchParams.get('secret')
+    const { token } = params
+    const { rating, review_text } = await req.json()
 
-    if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!rating || rating < 1 || rating > 5) {
+      return Response.json({ error: 'Invalid rating.' }, { status: 400 })
+    }
+    if (!review_text || review_text.trim().split(/\s+/).length < 11) {
+      return Response.json({ error: 'Review must be at least 11 words.' }, { status: 400 })
     }
 
     const rows = await sql`
-      SELECT id, name, email, order_number, rating, review_text, created_at
-      FROM reviews
-      ORDER BY created_at DESC
+      SELECT id FROM signups
+      WHERE private_token = ${token} OR token = ${token}
+    `
+    if (rows.length === 0) {
+      return Response.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    const id = rows[0].id
+
+    await sql`
+      UPDATE signups
+      SET review_submitted = true,
+          review_rating = ${rating},
+          review_text = ${review_text},
+          review_submitted_at = NOW()
+      WHERE id = ${id}
     `
 
-    return NextResponse.json({ success: true, reviews: rows })
+    return Response.json({ success: true })
   } catch (err) {
-    console.error('Admin reviews GET error:', err)
-    return NextResponse.json({ error: `Internal server error: ${err.message || err}` }, { status: 500 })
-  }
-}
-
-export async function DELETE(request) {
-  try {
-    const body = await request.json()
-    const { secret, id } = body
-
-    if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (!id) {
-      return NextResponse.json({ error: 'Review id is required.' }, { status: 400 })
-    }
-
-    await sql`DELETE FROM reviews WHERE id = ${id}`
-
-    return NextResponse.json({ success: true })
-  } catch (err) {
-    console.error('Admin reviews DELETE error:', err)
-    return NextResponse.json({ error: `Internal server error: ${err.message || err}` }, { status: 500 })
+    console.error('Review submit error:', err)
+    return Response.json({ error: err.message }, { status: 500 })
   }
 }
