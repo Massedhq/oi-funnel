@@ -134,7 +134,7 @@ export async function POST(request, { params }) {
       await resend.emails.send({
         from:    'OI Body Chemistry <orders@oibodychemistry.com>',
         to:      'orishainfinity@gmail.com',
-        subject: `New Order #1 — ${signup.name}`,
+        subject: `New Order — ${signup.name}`,
         html: `
           <p><strong>New Order Placed</strong></p>
           <p>Name: ${signup.name}</p>
@@ -144,7 +144,6 @@ export async function POST(request, { params }) {
           <p>Supplies: ${supplies}</p>
           <p>Amount: $${(parseInt(amount) / 100).toFixed(2)}</p>
           <p>Ship to: ${finalShipAddress}, ${finalShipCity}, ${finalShipState} ${finalShipZip}</p>
-          <p>Order: 1 of ${MAX_ORDERS}</p>
         `,
       })
 
@@ -169,10 +168,10 @@ export async function POST(request, { params }) {
     await resend.emails.send({
       from:    'OI Body Chemistry <orders@oibodychemistry.com>',
       to:      signup.email,
-      subject: `Order ${newOrderCount} Confirmed — OI Body Chemistry`,
+      subject: `Order Confirmed — OI Body Chemistry`,
       html: `
         <p>Hi ${signup.name},</p>
-        <p>Your Order ${newOrderCount} of ${MAX_ORDERS} is confirmed! 🎉</p>
+        <p>Your order is confirmed! 🎉</p>
         <p>Booster: ${finalProduct} — ${finalDose}mg</p>
         <p>Amount: $${(parseInt(amount) / 100).toFixed(2)}</p>
         <p>Your order will ship soon. We'll be in touch!</p>
@@ -183,7 +182,7 @@ export async function POST(request, { params }) {
     await resend.emails.send({
       from:    'OI Body Chemistry <orders@oibodychemistry.com>',
       to:      'orishainfinity@gmail.com',
-      subject: `Order #${newOrderCount} — ${signup.name}`,
+      subject: `Returning Order — ${signup.name}`,
       html: `
         <p><strong>Returning Order</strong></p>
         <p>Name: ${signup.name}</p>
@@ -192,7 +191,6 @@ export async function POST(request, { params }) {
         <p>Supplies: ${supplies}</p>
         <p>Amount: $${(parseInt(amount) / 100).toFixed(2)}</p>
         <p>Ship to: ${finalShipAddress}, ${finalShipCity}, ${finalShipState} ${finalShipZip}</p>
-        <p>Order: ${newOrderCount} of ${MAX_ORDERS}</p>
       `,
     })
 
