@@ -19,6 +19,8 @@ export default function ExistingCustomerCheckoutPage() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [selectedDose, setSelectedDose] = useState(null)
   const [selectedPrice, setSelectedPrice] = useState(null)
+  const [repName, setRepName] = useState(null)
+  const [repDiscount, setRepDiscount] = useState(0)
   const [supplies, setSupplies] = useState('none')
 
   const [shipData, setShipData] = useState({ address:'', address2:'', city:'', state:'', zip:'' })
@@ -40,7 +42,7 @@ export default function ExistingCustomerCheckoutPage() {
         setSignup(d)
         setLoading(false)
         if (!d.review_submitted) setScreen('review')
-else setScreen('dosage')
+        else setScreen('dosage')
         setShipData({
           address:  d.ship_address  || '',
           address2: d.ship_address2 || '',
@@ -93,7 +95,11 @@ else setScreen('dosage')
   }, [screen])
 
   const getSuppliesAmount = () => supplies === 'single' ? 175 : supplies === 'monthly' ? 700 : 0
-  const getTotalCents = () => Math.round((selectedPrice || 0) * 100) + getSuppliesAmount() + 890
+  const getDiscountCents = () => Math.round((repDiscount || 0) * 100)
+  const getTotalCents = () => {
+    const raw = Math.round((selectedPrice || 0) * 100) + getSuppliesAmount() + 890 - getDiscountCents()
+    return Math.max(raw, 0)
+  }
   const getTotal = () => (getTotalCents() / 100).toFixed(2)
 
   const handlePay = async () => {
@@ -118,6 +124,8 @@ else setScreen('dosage')
           amount: getTotalCents(),
           product: selectedProduct,
           dose: selectedDose,
+          rep_name: repName,
+          rep_discount: repDiscount,
           note: noteLine,
           ship_address:  shipData.address,
           ship_address2: shipData.address2,
@@ -190,10 +198,12 @@ else setScreen('dosage')
 
         {screen==='dosage' && (
           <ExistingCustomerDosageScreen
-            onNext={({ product, dose, price }) => {
+            onNext={({ product, dose, price, repName: rn, repDiscount: rd }) => {
               setSelectedProduct(product)
               setSelectedDose(dose)
               setSelectedPrice(price)
+              setRepName(rn)
+              setRepDiscount(rd)
               setScreen('supplies')
             }}
           />
@@ -260,6 +270,12 @@ else setScreen('dosage')
                 <span style={{fontSize:'12px',opacity:0.6,color:'#E8DDD2'}}>Shipping</span>
                 <span style={{fontSize:'12px',color:'#E8DDD2'}}>$8.90</span>
               </div>
+              {repName && (
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                  <span style={{fontSize:'12px',color:'#9ED9A0'}}>Rep Discount ({repName})</span>
+                  <span style={{fontSize:'12px',color:'#9ED9A0'}}>-${repDiscount.toFixed(2)}</span>
+                </div>
+              )}
               <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(200,168,138,0.2)',paddingTop:'8px'}}>
                 <span style={{fontSize:'11px',letterSpacing:'0.1em',textTransform:'uppercase',opacity:0.6,color:'#E8DDD2'}}>Total</span>
                 <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'22px',fontWeight:700,color:'#D8C3B3'}}>${getTotal()}</span>
