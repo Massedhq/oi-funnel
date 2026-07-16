@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ReviewFeed from '../components/funnel/ReviewFeed'
 
 export default function OrderLookupPage() {
   const router = useRouter()
@@ -71,6 +72,9 @@ export default function OrderLookupPage() {
             Not a customer yet?{' '}
             <a href="https://www.oibodychemistry.com" style={linkStyle}>Join here</a>
           </p>
+          <div style={{ marginTop: '32px' }}>
+  <ReviewFeed />
+</div>
         </div>
 
       </div>
