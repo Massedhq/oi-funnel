@@ -15,7 +15,8 @@ export default function FunnelPage() {
   const [termsOpen, setTermsOpen] = useState(false)
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', booster: '', supplies: 'none' })
   const [smsAgreed, setSmsAgreed] = useState(false)
-  const [remaining, setRemaining] = useState(300)
+  const [metatrideRemaining, setMetatrideRemaining] = useState(150)
+  const [triphaseRemaining, setTriphaseRemaining] = useState(150)
   const [capacityFull, setCapacityFull] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [checkoutScreen, setCheckoutScreen] = useState(1)
@@ -40,8 +41,8 @@ export default function FunnelPage() {
     fetch('/api/spots')
       .then(r => r.json())
       .then(d => {
-        setRemaining(d.remaining)
-        if (d.remaining <= 0) setCapacityFull(true)
+        setMetatrideRemaining(d.metatride_remaining ?? 0)
+        setTriphaseRemaining(d.triphase_remaining ?? 0)
       })
       .catch(() => {})
   }, [])
@@ -142,12 +143,13 @@ export default function FunnelPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        setRemaining(data.remaining)
+        setMetatrideRemaining(data.metatride_remaining)
+        setTriphaseRemaining(data.triphase_remaining)
         setSignupToken(data.token)
         setCheckoutScreen(3)
         document.getElementById('join-section')?.scrollIntoView({ behavior: 'smooth' })
       } else if (res.status === 410) {
-        setCapacityFull(true)
+        alert(data?.error || 'That booster is currently sold out. Please join the waiting list.')
       } else {
         alert(data?.error || 'Something went wrong. Please try again.')
       }
@@ -447,20 +449,21 @@ export default function FunnelPage() {
             <p style={sectionLabelStyle}>Limited Enrollment</p>
             <h2 style={sectionTitleStyle}>Begin Your <em style={{fontStyle:'italic',color:'var(--gold-light)'}}>Journey</em></h2>
 
-            {!capacityFull && !submitted && checkoutScreen === 1 && (
+            {!submitted && checkoutScreen === 1 && (
               <ContactScreen
                 formData={formData}
                 setFormData={setFormData}
                 smsAgreed={smsAgreed}
                 setSmsAgreed={setSmsAgreed}
-                remaining={remaining}
+                metatrideRemaining={metatrideRemaining}
+                triphaseRemaining={triphaseRemaining}
                 onNext={() => setCheckoutScreen(2)}
                 setPrivacyOpen={setPrivacyOpen}
                 setTermsOpen={setTermsOpen}
               />
             )}
 
-            {!capacityFull && !submitted && checkoutScreen === 2 && (
+            {!submitted && checkoutScreen === 2 && (
               <ShippingScreen
                 shipData={shipData}
                 setShipData={setShipData}
@@ -474,7 +477,7 @@ export default function FunnelPage() {
               />
             )}
 
-            {!capacityFull && !submitted && checkoutScreen === 3 && (
+            {!submitted && checkoutScreen === 3 && (
               <PaymentScreen
                 formData={formData}
                 signupToken={signupToken}
@@ -487,8 +490,8 @@ export default function FunnelPage() {
               />
             )}
 
-            {(submitted || capacityFull) && (
-              <ConfirmationScreen submitted={submitted} capacityFull={capacityFull} />
+            {submitted && (
+              <ConfirmationScreen submitted={submitted} capacityFull={false} />
             )}
           </div>
 
