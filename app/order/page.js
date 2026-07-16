@@ -81,6 +81,18 @@ export default function OrderLookupPage() {
       </div>
 
       <style suppressHydrationWarning>{`
+        :root {
+          --black: #050505;
+          --deep: #0A0A0A;
+          --cream: #F3ECE5;
+          --gold: #C8A88A;
+          --gold-light: #D8C3B3;
+          --warm: #161412;
+          --text-muted: #B99678;
+          --border: rgba(200,168,138,0.3);
+          --white: #FFFFFF;
+          --light-beige: #E8DDD2;
+        }
         * { box-sizing: border-box; }
         body { background: #050505; }
         input::placeholder { color: rgba(232,221,210,0.4); }
