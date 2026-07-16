@@ -4,7 +4,6 @@ import { useState } from 'react'
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
 
 export default function ContactScreen({ formData, setFormData, smsAgreed, setSmsAgreed, metatrideRemaining, triphaseRemaining, onNext, setPrivacyOpen, setTermsOpen }) {
-  const [waitlistMode, setWaitlistMode] = useState(false)
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false)
   const [waitlistDone, setWaitlistDone] = useState(false)
   const [waitlistError, setWaitlistError] = useState('')
@@ -20,7 +19,7 @@ export default function ContactScreen({ formData, setFormData, smsAgreed, setSms
     if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return }
     if (!formData.booster) { alert('Please select your wellness booster.'); return }
     if (!smsAgreed) { alert('Please agree to the Terms and Conditions to continue.'); return }
-    if (isSoldOut) { alert(`${formData.booster} is currently sold out. Please join the waiting list below.`); return }
+    if (isSoldOut) { alert(`${formData.booster} is currently sold out. Please join the waiting list.`); return }
     onNext()
   }
 
@@ -66,17 +65,6 @@ export default function ContactScreen({ formData, setFormData, smsAgreed, setSms
 
   return (
     <div style={cardStyle}>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '28px', marginBottom: '18px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: 700, color: 'var(--gold-light)', lineHeight: 1 }}>{metatrideRemaining}</div>
-          <div style={{ fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.5, marginTop: '4px' }}>MetaTride Spots</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: 700, color: 'var(--gold-light)', lineHeight: 1 }}>{triphaseRemaining}</div>
-          <div style={{ fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.5, marginTop: '4px' }}>TriPhase Spots</div>
-        </div>
-      </div>
-
       <p style={labelStyle}>Contact Information</p>
       {['name', 'phone', 'email'].map(field => (
         <input
@@ -96,8 +84,12 @@ export default function ContactScreen({ formData, setFormData, smsAgreed, setSms
         style={{ ...inputStyle, appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C8A88A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center', cursor: 'pointer' }}
       >
         <option value="" disabled>Choose Your Booster</option>
-        <option value="MetaTride Ultra">MetaTride Ultra™ {metatrideRemaining <= 0 ? '(Sold Out)' : ''}</option>
-        <option value="TriPhase MetaBurn">TriPhase MetaBurn™ {triphaseRemaining <= 0 ? '(Sold Out)' : ''}</option>
+        <option value="MetaTride Ultra">
+          MetaTride Ultra™ — {metatrideRemaining <= 0 ? 'Sold Out' : `${metatrideRemaining} left`}
+        </option>
+        <option value="TriPhase MetaBurn">
+          TriPhase MetaBurn™ — {triphaseRemaining <= 0 ? 'Sold Out' : `${triphaseRemaining} left`}
+        </option>
       </select>
 
       {formData.booster && !isSoldOut && (
