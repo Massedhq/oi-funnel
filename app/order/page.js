@@ -72,9 +72,10 @@ export default function OrderLookupPage() {
             Not a customer yet?{' '}
             <a href="https://www.oibodychemistry.com" style={linkStyle}>Join here</a>
           </p>
+
           <div style={{ marginTop: '32px' }}>
-  <ReviewFeed />
-</div>
+            <ReviewFeed />
+          </div>
         </div>
 
       </div>
