@@ -64,7 +64,7 @@ export default function OrderLookupPage() {
             />
             {error && <p style={errorStyle}>{error}</p>}
             <button onClick={handleLookup} disabled={loading} style={{ ...btnStyle, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
-              {loading ? 'Looking up your order...' : 'Find my order'}
+              {loading ? 'Looking up your order...' : 'Place my order'}
             </button>
           </div>
 
