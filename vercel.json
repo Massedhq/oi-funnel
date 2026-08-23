@@ -4,5 +4,9 @@
       "path": "/api/cleanup",
       "schedule": "0 */2 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/order", "destination": "https://oi-order.vercel.app/order" },
+    { "source": "/order/:path*", "destination": "https://oi-order.vercel.app/order/:path*" }
   ]
 }
