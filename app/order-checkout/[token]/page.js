@@ -41,8 +41,8 @@ export default function ExistingCustomerCheckoutPage() {
         if (d.error) { setNotFound(true); setLoading(false); return }
         setSignup(d)
         setLoading(false)
-        if (!d.review_submitted) setScreen('review')
-        else setScreen('dosage')
+        // Always show review first — required before every order
+        setScreen('review')
         setShipData({
           address:  d.ship_address  || '',
           address2: d.ship_address2 || '',

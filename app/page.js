@@ -16,6 +16,7 @@ export default function FunnelPage() {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', booster: '', supplies: 'none' })
   const [smsAgreed, setSmsAgreed] = useState(false)
   const [remaining, setRemaining] = useState(300)
+  const [inventory, setInventory] = useState({ 'MetaTride Ultra': 150, 'TriPhase MetaBurn': 150 })
   const [capacityFull, setCapacityFull] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [checkoutScreen, setCheckoutScreen] = useState(1)
@@ -42,6 +43,11 @@ export default function FunnelPage() {
       .then(d => {
         setRemaining(d.remaining)
         if (d.remaining <= 0) setCapacityFull(true)
+        if (d.inventory) {
+          const inv = {}
+          Object.entries(d.inventory).forEach(([k, v]) => { inv[k] = v.available })
+          setInventory(inv)
+        }
       })
       .catch(() => {})
   }, [])
@@ -454,6 +460,7 @@ export default function FunnelPage() {
                 smsAgreed={smsAgreed}
                 setSmsAgreed={setSmsAgreed}
                 remaining={remaining}
+                inventory={inventory}
                 onNext={() => setCheckoutScreen(2)}
                 setPrivacyOpen={setPrivacyOpen}
                 setTermsOpen={setTermsOpen}

@@ -1,8 +1,17 @@
 'use client'
 
-const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
+export default function ContactScreen({ formData, setFormData, smsAgreed, setSmsAgreed, remaining, inventory = {}, onNext, setPrivacyOpen, setTermsOpen }) {
 
-export default function ContactScreen({ formData, setFormData, smsAgreed, setSmsAgreed, remaining, onNext, setPrivacyOpen, setTermsOpen }) {
+  const getStock = (name) => inventory[name] ?? 150
+  const isSoldOut = (name) => getStock(name) <= 0
+
+  const getLabel = (name, display) => {
+    const stock = getStock(name)
+    if (stock <= 0) return `${display} — Sold Out`
+    if (stock <= 20) return `${display} — Only ${stock} left`
+    return `${display} — ${stock} available`
+  }
+
   const goToShipping = () => {
     if (!formData.name || formData.name.trim().length < 2) { alert('Please enter your full name.'); return }
     const phoneClean = formData.phone.replace(/\D/g, '')
@@ -10,6 +19,7 @@ export default function ContactScreen({ formData, setFormData, smsAgreed, setSms
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) { alert('Please enter a valid email address.'); return }
     if (!formData.booster) { alert('Please select your wellness booster.'); return }
+    if (isSoldOut(formData.booster)) { alert('This booster is currently out of stock. Please select the other option.'); return }
     if (!smsAgreed) { alert('Please agree to the Terms and Conditions to continue.'); return }
     onNext()
   }
@@ -40,15 +50,18 @@ export default function ContactScreen({ formData, setFormData, smsAgreed, setSms
         style={{ ...inputStyle, appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C8A88A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center', cursor: 'pointer' }}
       >
         <option value="" disabled>Choose Your Booster</option>
-        <option value="MetaTride Ultra">MetaTride Ultra™</option>
-        <option value="TriPhase MetaBurn">TriPhase MetaBurn™</option>
+        <option value="MetaTride Ultra" disabled={isSoldOut('MetaTride Ultra')}>
+          {getLabel('MetaTride Ultra', 'MetaTride Ultra™')}
+        </option>
+        <option value="TriPhase MetaBurn" disabled={isSoldOut('TriPhase MetaBurn')}>
+          {getLabel('TriPhase MetaBurn', 'TriPhase MetaBurn™')}
+        </option>
       </select>
 
       {formData.booster && (
         <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 18px', marginBottom: '14px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <span style={{ fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--light-beige)', opacity: 0.6 }}>Monthly Investment</span>
+          <span style={{ fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--light-beige)', opacity: 0.6 }}>Starting at</span>
           <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '44px', fontWeight: 600, color: 'var(--gold-light)', lineHeight: 1 }}>$45</span>
-          <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--light-beige)', opacity: 0.6, marginTop: '2px' }}>Per Month · Cancel Anytime</span>
         </div>
       )}
 
