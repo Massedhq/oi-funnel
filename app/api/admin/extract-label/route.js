@@ -4,6 +4,9 @@
 // to read the tracking number + recipient name/address off it, then
 // tries to match that to a customer record in `signups`.
 //
+// Searches BOTH databases (oi-funnel's and oi-order's), since customers
+// can now exist in either one.
+//
 // Requires ANTHROPIC_API_KEY to be set in your Vercel env vars.
 // Get one at https://console.anthropic.com
 
@@ -11,6 +14,7 @@ import { NextResponse } from 'next/server'
 import { neon } from '@neondatabase/serverless'
 
 const sql = neon(process.env.DATABASE_URL)
+const otherSql = neon('postgresql://neondb_owner:npg_BR0oZgezpCn8@ep-young-meadow-ayhj35qf-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require')
 
 export async function POST(request) {
   try {
@@ -93,17 +97,36 @@ If any field can't be read clearly, use an empty string for it. Return ONLY the 
 
     const { trackingNumber, recipientName, city, state, zip } = extracted
 
-    // Try to match by name first, then fall back to zip if no exact name match.
-    let candidates = []
-    if (recipientName) {
-      candidates = await sql`
-        SELECT * FROM signups WHERE LOWER(name) = LOWER(${recipientName}) LIMIT 5
-      `
+    // Search both databases in parallel, then combine results.
+    // Each candidate is tagged with which database it came from so
+    // ship-order knows where to write the tracking number.
+    const searchDb = async (dbSql, source) => {
+      let results = []
+      if (recipientName) {
+        results = await dbSql`
+          SELECT * FROM signups WHERE LOWER(name) = LOWER(${recipientName}) LIMIT 5
+        `
+      }
+      if (!results.length && zip) {
+        results = await dbSql`
+          SELECT * FROM signups WHERE ship_zip = ${zip} LIMIT 5
+        `
+      }
+      return results.map((c) => ({ ...c, _source: source }))
     }
-    if (!candidates.length && zip) {
-      candidates = await sql`
-        SELECT * FROM signups WHERE ship_zip = ${zip} LIMIT 5
-      `
+
+    let candidates = []
+    try {
+      const [mainResults, otherResults] = await Promise.all([
+        searchDb(sql, 'main'),
+        searchDb(otherSql, 'order').catch((e) => {
+          console.error('Secondary database search failed:', e)
+          return []
+        }),
+      ])
+      candidates = [...mainResults, ...otherResults]
+    } catch (e) {
+      console.error('Candidate search error:', e)
     }
 
     return NextResponse.json({
@@ -118,6 +141,7 @@ If any field can't be read clearly, use an empty string for it. Return ONLY the 
         ship_state: c.ship_state,
         ship_zip: c.ship_zip,
         order_count: c.order_count,
+        source: c._source,
       })),
     })
   } catch (err) {
