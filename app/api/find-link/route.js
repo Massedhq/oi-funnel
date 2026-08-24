@@ -1,17 +1,9 @@
-// app/api/find-link/route.js
-//
-// PUBLIC route — customer-facing "Find My Link" button.
-// No admin secret required. Takes just an email.
-//
-// Security note: this always returns the same generic success message,
-// whether or not the email is found, so someone can't use it to check
-// which emails are registered customers.
-
 import { NextResponse } from 'next/server'
 import { neon } from '@neondatabase/serverless'
 import { Resend } from 'resend'
 
 const sql = neon(process.env.DATABASE_URL)
+const otherSql = neon('postgresql://neondb_owner:npg_BR0oZgezpCn8@ep-young-meadow-ayhj35qf-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require')
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const GENERIC_MESSAGE = "If that email is on file, we've sent your link — check your inbox (and spam folder) in a few minutes."
@@ -25,14 +17,29 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 })
     }
 
-    const rows = await sql`
+    let rows = await sql`
       SELECT * FROM signups WHERE LOWER(email) = ${email} LIMIT 1
     `
+
+    let fromOrderDb = false
+    if (!rows.length) {
+      try {
+        rows = await otherSql`
+          SELECT * FROM signups WHERE LOWER(email) = ${email} LIMIT 1
+        `
+        fromOrderDb = true
+      } catch (e) {
+        console.error('Secondary database lookup failed:', e)
+      }
+    }
 
     if (rows.length) {
       const signup = rows[0]
       const activeToken = signup.private_token || signup.token
-      const link = `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/${activeToken}`
+      const baseUrl = fromOrderDb
+        ? 'https://order.oibodychemistry.com'
+        : process.env.NEXT_PUBLIC_SITE_URL
+      const link = `${baseUrl}/checkout/${activeToken}`
 
       await resend.emails.send({
         from: 'OI Body Chemistry <orders@oibodychemistry.com>',
@@ -48,11 +55,9 @@ export async function POST(request) {
       })
     }
 
-    // Always return the same message, found or not.
     return NextResponse.json({ success: true, message: GENERIC_MESSAGE })
   } catch (err) {
     console.error('Find-link error:', err)
-    // Still return the generic message so we don't leak error details either.
     return NextResponse.json({ success: true, message: GENERIC_MESSAGE })
   }
 }

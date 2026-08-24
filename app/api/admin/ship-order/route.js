@@ -1,20 +1,7 @@
 // app/api/admin/ship-order/route.js
 //
 // Marks a customer's most recent order as shipped and emails them the tracking number.
-// The shipping address is already on file from checkout — you do NOT re-enter it.
-// You only provide: the customer's email, a carrier, and a tracking number.
-//
-// Usage (from anywhere — Postman, curl, a browser fetch, etc.):
-//
-// POST /api/admin/ship-order
-// Headers: { "Content-Type": "application/json" }
-// Body:
-// {
-//   "secret": "<ADMIN_SECRET from your Vercel env vars>",
-//   "email": "customer@email.com",
-//   "carrier": "USPS",
-//   "trackingNumber": "9400111899223197428019"
-// }
+// Checks both databases (oi-funnel's and oi-order's) since customers can now exist in either.
 
 import { NextResponse } from 'next/server'
 import { neon } from '@neondatabase/serverless'
@@ -50,19 +37,33 @@ export async function POST(request) {
     }
 
     const sql = neon(process.env.DATABASE_URL)
+    const otherSql = neon('postgresql://neondb_owner:npg_BR0oZgezpCn8@ep-young-meadow-ayhj35qf-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require')
     const resend = new Resend(process.env.RESEND_API_KEY)
 
     const normalizedCarrier = carrier.toUpperCase().trim()
 
-    const rows = await sql`
+    let rows = await sql`
       SELECT * FROM signups WHERE email = ${email} LIMIT 1
     `
+    let activeSql = sql
+
+    if (!rows.length) {
+      try {
+        rows = await otherSql`
+          SELECT * FROM signups WHERE email = ${email} LIMIT 1
+        `
+        activeSql = otherSql
+      } catch (e) {
+        console.error('Secondary database lookup failed:', e)
+      }
+    }
+
     if (!rows.length) {
       return NextResponse.json({ error: 'No customer found with that email.' }, { status: 404 })
     }
     const signup = rows[0]
 
-    await sql`
+    await activeSql`
       UPDATE signups SET
         tracking_number = ${trackingNumber},
         tracking_carrier = ${normalizedCarrier},
